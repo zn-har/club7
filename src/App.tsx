@@ -1,0 +1,70 @@
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect } from 'react'
+import { Loader } from './components/Loader'
+import { Nav } from './components/Nav'
+import { hasWebGL } from './lib/env'
+import { initChoreography, playIntro } from './motion/choreography'
+import { initSmoothScroll, scrollToTarget, ScrollTrigger } from './motion/scroll'
+import { Coaches } from './sections/Coaches'
+import { Facility } from './sections/Facility'
+import { Finale } from './sections/Finale'
+import { Hero } from './sections/Hero'
+import { Membership } from './sections/Membership'
+import { Philosophy } from './sections/Philosophy'
+import { Programs } from './sections/Programs'
+import './styles/sections.css'
+
+const Stage = lazy(() => import('./scene/Stage'))
+
+export default function App() {
+  useLayoutEffect(() => initChoreography(), [])
+  useEffect(() => initSmoothScroll(), [])
+
+  useEffect(() => {
+    // late layout shifts (fonts, lazy images) move trigger positions
+    const refresh = () => ScrollTrigger.refresh()
+    document.fonts.ready.then(refresh)
+    window.addEventListener('load', refresh)
+    // any remaining in-page anchors go through the scroller
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element).closest?.('a[href^="#"]')
+      if (!a || e.defaultPrevented) return
+      e.preventDefault()
+      scrollToTarget(a.getAttribute('href')!)
+    }
+    document.addEventListener('click', onClick)
+    return () => {
+      window.removeEventListener('load', refresh)
+      document.removeEventListener('click', onClick)
+    }
+  }, [])
+
+  const onLoaded = useCallback(() => {
+    playIntro()
+  }, [])
+
+  return (
+    <>
+      <a className="skip-link" href="#philosophy">
+        Skip to content
+      </a>
+      <Loader onDone={onLoaded} />
+      {hasWebGL && (
+        <div className="stage" aria-hidden>
+          <Suspense fallback={null}>
+            <Stage />
+          </Suspense>
+        </div>
+      )}
+      <Nav />
+      <main>
+        <Hero />
+        <Philosophy />
+        <Programs />
+        <Facility />
+        <Coaches />
+        <Membership />
+        <Finale />
+      </main>
+    </>
+  )
+}

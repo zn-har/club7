@@ -1,0 +1,167 @@
+import { ContactShadows, PerformanceMonitor, SoftShadows } from '@react-three/drei'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Bloom, DepthOfField, EffectComposer, N8AO, Noise, ToneMapping, Vignette } from '@react-three/postprocessing'
+import { BlendFunction, Effect, EffectPass, ToneMappingMode, type DepthOfFieldEffect } from 'postprocessing'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { NoToneMapping, Vector3 } from 'three'
+import { initialTier, isCoarsePointer, prefersReducedMotion } from '../lib/env'
+import { Barbell, PLATE_R } from './Barbell'
+import { CameraRig } from './CameraRig'
+import { Lighting } from './Lighting'
+import { Machines } from './Machines'
+import { Platform } from './Platform'
+import { Dumbbell, Kettlebell, PlateStack } from './Props'
+import { PLATFORM_H, STATIONS, stage } from './state'
+
+const focusPoint = new Vector3()
+
+function Ready() {
+  useEffect(() => {
+    stage.ready = true
+    window.dispatchEvent(new Event('stage:ready'))
+  }, [])
+  return null
+}
+
+/**
+ * One NaN or Inf pixel (a degenerate shadow or specular sample) is invisible on its own, but
+ * depth of field and bloom blur it across the frame: a full-screen flash. Scrub it first.
+ * clamp() maps NaN to 0 on D3D/ANGLE; the isnan check covers drivers where it doesn't.
+ */
+class SanitizeEffect extends Effect {
+  constructor() {
+    super(
+      'Sanitize',
+      /* glsl */ `
+      void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+        vec3 c = inputColor.rgb;
+        if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+        outputColor = vec4(clamp(c, 0.0, 32.0), inputColor.a);
+      }`,
+    )
+  }
+}
+
+function SanitizePass() {
+  const camera = useThree((s) => s.camera)
+  // its own pass, so the blur effects after it read the scrubbed buffer
+  const pass = useMemo(() => new EffectPass(camera, new SanitizeEffect()), [camera])
+  useEffect(() => () => pass.dispose(), [pass])
+  return <primitive object={pass} />
+}
+
+/** Built once for the startup tier: rebuilding the chain mid-scroll renders a raw frame (a flash). */
+function Effects({ tier }: { tier: 'high' | 'low' }) {
+  const dof = useRef<DepthOfFieldEffect>(null)
+  useFrame(() => {
+    const e = dof.current
+    if (!e) return
+    const c = stage.cam
+    // long-lens look by default; macro shots open right up
+    e.bokehScale = 0.6 + c.blur * 6
+    e.target = focusPoint.set(c.fx, c.fy, c.fz)
+  })
+  return (
+    <EffectComposer multisampling={tier === 'high' ? 4 : 0} enableNormalPass={false}>
+      {/* contact occlusion only: a wide radius paints game-y halos round everything */}
+      <N8AO aoRadius={0.18} intensity={1.3} distanceFalloff={0.4} quality={tier === 'high' ? 'medium' : 'performance'} halfRes={tier === 'low'} />
+      <SanitizePass />
+      {tier === 'high' ? <DepthOfField ref={dof} worldFocusRange={0.7} bokehScale={2} resolutionScale={0.5} /> : <></>}
+      {/* only true highlights bloom: battens, chrome streaks, the sleeve catching the key */}
+      <Bloom mipmapBlur luminanceThreshold={1.5} luminanceSmoothing={0.3} intensity={0.45} radius={0.7} />
+      {/* ACES keeps the blacks black and the speculars hot; AgX flattened the set to grey */}
+      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      <Vignette offset={0.42} darkness={0.38} />
+      <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.08} />
+    </EffectComposer>
+  )
+}
+
+/** The set: kit laid out on a rubber floor the way a strength coach would leave it. */
+function Set() {
+  const { bells, dumbbells, stacks } = STATIONS
+  return (
+    <>
+      <Platform />
+      <Machines />
+      <Barbell position-y={PLATE_R + PLATFORM_H} />
+      <ContactShadows position-y={PLATFORM_H + 0.002} scale={3.2} blur={2.4} far={0.5} opacity={0.75} resolution={512} frames={1} color="#000000" />
+
+      <group position={bells}>
+        {/* front bell turned so its weight faces the conditioning shot; the others set down any old way */}
+        <Kettlebell rotation-y={0.9} />
+        <Kettlebell position={[-0.34, 0, 0.12]} rotation-y={0.25} />
+        <Kettlebell position={[-0.12, 0, -0.38]} rotation-y={2.5} />
+        <ContactShadows position-y={0.002} scale={1.6} blur={2} far={0.35} opacity={0.8} resolution={256} frames={1} color="#000000" />
+      </group>
+
+      <group position={dumbbells}>
+        <Dumbbell position={[0, 0, 0.13]} rotation-y={0.12} />
+        <Dumbbell position={[0.03, 0, -0.16]} rotation-y={-0.06} />
+        <ContactShadows position-y={0.002} scale={1.4} blur={2} far={0.25} opacity={0.8} resolution={256} frames={1} color="#000000" />
+      </group>
+
+      <group position={stacks}>
+        <PlateStack count={1} position={[-0.55, 0, 0.08]} />
+        <PlateStack count={2} position={[0, 0, -0.04]} />
+        <PlateStack count={3} position={[0.55, 0, 0.06]} />
+        <ContactShadows position-y={0.002} scale={2} blur={2} far={0.3} opacity={0.8} resolution={256} frames={1} color="#000000" />
+      </group>
+    </>
+  )
+}
+
+/** One persistent canvas behind the whole page. */
+export default function Stage() {
+  const tier = initialTier
+  const [dpr, setDpr] = useState(initialTier === 'high' ? 1.5 : 1.25)
+
+  useEffect(() => {
+    if (isCoarsePointer || prefersReducedMotion) return
+    const onMove = (e: PointerEvent) => {
+      stage.pointer.x = (e.clientX / window.innerWidth) * 2 - 1
+      stage.pointer.y = (e.clientY / window.innerHeight) * 2 - 1
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
+
+  const c = stage.cam
+  return (
+    <Canvas
+      className="stage-canvas"
+      shadows
+      dpr={dpr}
+      gl={{
+        antialias: false,
+        toneMapping: NoToneMapping,
+        powerPreference: 'high-performance',
+        stencil: false,
+        // dev frame grabs need the buffer kept after compositing
+        preserveDrawingBuffer: import.meta.env.DEV,
+      }}
+      camera={{ fov: 22, near: 0.05, far: 40, position: [c.px, c.py, c.pz] }}
+      aria-hidden
+    >
+      {/* a little lifted from black: gym air, not a void */}
+      <color attach="background" args={['#100f0e']} />
+      <fog attach="fog" args={['#100f0e', 4.5, 15]} />
+      <PerformanceMonitor
+        onDecline={() => {
+          // resolution only: swapping shadows or post mid-scroll flashes the whole frame
+          setDpr(1)
+        }}
+      />
+      {/* PCSS: contact-hardening shadows, the way a real overhead source falls off */}
+      {/* fixed at startup: toggling it later recompiles every shadowed material mid-scroll */}
+      {initialTier === 'high' && <SoftShadows size={46} samples={14} focus={0.35} />}
+      <Suspense fallback={null}>
+        <Lighting shadowSize={tier === 'high' ? 2048 : 1024} />
+        <Set />
+        <CameraRig parallax={!isCoarsePointer && !prefersReducedMotion} />
+        <Effects tier={tier} />
+        <Ready />
+      </Suspense>
+    </Canvas>
+  )
+}
