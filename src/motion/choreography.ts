@@ -210,6 +210,12 @@ export function initChoreography() {
       // holds while the frame holds, leaves as the camera starts to move
       scrollTrigger: { trigger: '.hero', start: RM ? '30% top' : 'top -12%', end: 'bottom 25%', scrub: true },
     })
+    // the scrim ends at the hero's bottom edge: dissolve it from the first scroll so that edge never shows
+    gsap.to('.hero__scrim', {
+      opacity: 0,
+      ease: 'none',
+      scrollTrigger: { trigger: '.hero', start: 'top top', end: '+=40', scrub: true },
+    })
 
     /* 2  Philosophy statement: words come up as they are read */
     document.querySelectorAll<HTMLElement>('[data-words]').forEach((el) => {
