@@ -8,13 +8,14 @@ export function Finale() {
     <>
       <section className="finale" aria-labelledby="finale-title">
         {!hasWebGL && <Photo name="barbell-bw" alt="A loaded barbell resting on the gym floor" className="finale__fallback" reveal={false} />}
+        <div className="finale__scrim" aria-hidden />
         <div className="finale__sticky wrap">
           <p className="meta" data-reveal="fade">
             Sultan Bathery and Al Quoz, Dubai
           </p>
           <Lines id="finale-title" className="h-xl finale__title" lines={['See you', 'on the floor.']} />
           <div className="finale__cta" data-reveal="fade">
-            <Button href="#membership">Book your first session</Button>
+            <Button href="#membership" variant="amber">Book your first session</Button>
           </div>
         </div>
       </section>
@@ -22,8 +23,8 @@ export function Finale() {
       <footer className="footer">
         <div className="wrap grid footer__grid">
           <div className="footer__brand">
-            <p className="display h-md">Club 7</p>
-            <p className="meta">Fitness &amp; Gym, since 2022</p>
+            <img src="/c7-mark.png" alt="Club 7" width="92" height="60" />
+            <p className="meta">Club Seven Fitness &amp; Gym, since 2022</p>
           </div>
           <div className="footer__col">
             <p className="meta">Wayanad</p>
@@ -53,14 +54,14 @@ export function Finale() {
               <a href="https://www.instagram.com/c7_clubseven/" target="_blank" rel="noreferrer">Instagram</a>
               <br />
               <a href="https://www.facebook.com/c7club/" target="_blank" rel="noreferrer">Facebook</a>
-              {/* [NEED: opening hours] */}
+              {/* [NEED: opening hours] until then, the clubs answer it by phone */}
             </p>
           </div>
         </div>
         <div className="wrap footer__base">
           <p className="meta">© {new Date().getFullYear()} Club Seven Fitness &amp; Gym</p>
           <p className="meta footer__credits">
-            Photography from Unsplash. Environment and materials from Poly Haven (CC0).
+            Club photography from Club 7. Fallback photography from Unsplash. Lighting and materials from Poly Haven (CC0).
           </p>
         </div>
       </footer>

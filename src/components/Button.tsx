@@ -10,7 +10,7 @@ export function Button({
 }: {
   href: string
   children: ReactNode
-  variant?: 'solid' | 'ghost' | 'red'
+  variant?: 'solid' | 'ghost' | 'amber' | 'ink'
   'data-intro'?: boolean
 }) {
   const onClick = (e: MouseEvent) => {

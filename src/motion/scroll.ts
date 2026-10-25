@@ -6,6 +6,8 @@ import { prefersReducedMotion } from '../lib/env'
 gsap.registerPlugin(ScrollTrigger)
 // the mobile URL bar resizes the viewport on every direction change; refreshing then jolts the take
 ScrollTrigger.config({ ignoreMobileResize: true })
+// the film starts at the top: ScrollTrigger otherwise restores the last position on reload
+ScrollTrigger.clearScrollMemory('manual')
 
 let lenis: Lenis | null = null
 

@@ -4,8 +4,8 @@ import { Nav } from './components/Nav'
 import { hasWebGL } from './lib/env'
 import { initChoreography, playIntro } from './motion/choreography'
 import { initSmoothScroll, scrollToTarget, ScrollTrigger } from './motion/scroll'
+import { Clubs } from './sections/Clubs'
 import { Coaches } from './sections/Coaches'
-import { Facility } from './sections/Facility'
 import { Finale } from './sections/Finale'
 import { Hero } from './sections/Hero'
 import { Membership } from './sections/Membership'
@@ -55,12 +55,14 @@ export default function App() {
           </Suspense>
         </div>
       )}
+      {/* the club's sand walls rise over the set through the middle of the page */}
+      <div className="veil" aria-hidden />
       <Nav />
       <main>
         <Hero />
         <Philosophy />
         <Programs />
-        <Facility />
+        <Clubs />
         <Coaches />
         <Membership />
         <Finale />

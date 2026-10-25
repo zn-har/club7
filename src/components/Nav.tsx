@@ -2,11 +2,10 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { lockScroll, scrollToTarget } from '../motion/scroll'
 
 const LINKS = [
-  ['#philosophy', 'Philosophy'],
   ['#programs', 'Training'],
-  ['#floor', 'The floor'],
+  ['#clubs', 'The clubs'],
   ['#coaches', 'Why Club 7'],
-  ['#membership', 'Join'],
+  ['#membership', 'Visit'],
 ] as const
 
 export function Nav() {
@@ -49,17 +48,14 @@ export function Nav() {
   return (
     <header className={`nav ${scrolled ? 'is-scrolled' : ''} ${open ? 'is-open' : ''} ${hidden && !open ? 'is-hidden' : ''}`} data-intro>
       <a href="#top" className="nav__mark" onClick={go('#top')} aria-label="Club 7 Fitness & Gym, back to top">
+        <img src="/c7-mark.png" alt="" width="46" height="30" />
         <span className="display">Club 7</span>
-        <span className="meta">Fitness &amp; Gym</span>
       </a>
       <nav aria-label="Primary" className="nav__links" id="primary-nav">
         <ul>
-          {LINKS.map(([href, label], i) => (
+          {LINKS.map(([href, label]) => (
             <li key={href}>
               <a href={href} onClick={go(href)}>
-                <span className="nav__num meta" aria-hidden>
-                  0{i + 1}
-                </span>
                 {label}
               </a>
             </li>

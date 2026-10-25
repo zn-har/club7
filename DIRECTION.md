@@ -1,4 +1,6 @@
-# KAIROS Athletic Club — Creative Direction
+# Club 7 — Creative Direction
+
+> **Oct 2026 revision:** see `RESEARCH.md` for the market research, the audit and the reasoning. Sections 2, 4 and 5 below are superseded where §9 says so.
 
 *Kairos (Gk.): the decisive moment. The brand is about the single rep you are about to take.*
 
@@ -96,3 +98,27 @@ one-liners and tier summaries (full sentences). Accent ember is used for state o
 - Contact shadows are baked once (`frames={1}`); pool lights cast no shadows.
 - Panorama canvas lazy-mounts a viewport ahead and unmounts when far away.
 - No WebGL → hero and finale fall back to graded photographs; panorama shows a still.
+
+
+## 9. October 2026 revision: "Brass, chalk, one light"
+
+**Palette** (`styles/global.css`): ink `#0d0c0b`, bone `#ebe6dd`, sand `#cbbda2` (the club's walls), sand-ink `#1a1714`, brass `#c29a5b` / `#8a6a38` (the club's metalwork, used for hairlines and state), and amber `#f7a600` (the C7 mark, used only for the primary CTA and the logo). The red is gone.
+
+**Page:** Hero, then Philosophy and Programs (dark, over the live set), then **The clubs**, **Why Club 7** and **Visit** (on sand, real Club 7 photography), then Finale (dark, the set lit again) and the footer.
+
+**Take, now three moves** (`motion/choreography.ts`):
+| Move | Range | What it reveals |
+|---|---|---|
+| hero → macro | hero top -22% → philosophy top 15% | the hero *holds* first; then the knurl, under the founding statement |
+| macro → program | programs top bottom → top 25% | the station for the picked tab (tabs still cross the floor, 1.8 s) |
+| program → finale | under the veil, through Visit | nothing visible; the bookend is composed before it's revealed |
+
+Cut: `above` (a jib into darkness), `wide`, `coaches` and `membership` (empty floor), the top-down finale and its roll, and the Poly Haven panorama (another gym presented as ours).
+
+**Veil:** a fixed sand layer, with `stage.veil` driven by one trigger (`buildVeil`). It rises with `.clubs` (top 72% → 18%) and falls with `.finale` (top 62% → 4%). While it's up the canvas switches to `frameloop="demand"`, so the GPU idles through the middle of the page.
+
+**Mist:** tried as low fbm haze slabs lit by the key cone, then removed on review. Only the original faint key-light beam (`Lighting.tsx`) remains.
+
+**Framing:** shots frame the subject right of centre for the left text column. On portrait screens `FRAME_SCALE` keeps the subject centred.
+
+**Booking:** pick a club, then name, phone, optional email, goal and time. It sends a prefilled `mailto:` to info@c7clubseven.com and offers the club's `tel:` link as the fallback. There's no backend yet, and nothing is lost silently.

@@ -36,6 +36,8 @@ export type Shot = {
 }
 
 type V = [number, number, number]
+/** portrait screens stack the type over a bottom scrim, so subjects stay centred instead of right */
+const FRAME_SCALE = typeof window !== 'undefined' && window.innerWidth / window.innerHeight < 0.9 ? 0.15 : 1
 const add = (a: Vector3, b: V): V => [a.x + b[0], a.y + b[1], a.z + b[2]]
 /** shots on the bar sit on the platform */
 const up = (p: V): V => [p[0], p[1] + PLATFORM_H, p[2]]
@@ -49,6 +51,7 @@ function shot(o: {
   const light = o.light ?? [o.target[0] - 0.1, 3.4, o.target[2] - 0.8]
   const lt = o.lightTarget ?? [o.target[0], 0, o.target[2]]
   const f = o.focus ?? o.target
+  if (o.frame) o = { ...o, frame: o.frame * FRAME_SCALE }
   if (o.frame) {
     // aim left of the subject: target += normalize(up × viewDir) * distance * frame
     const dir = new Vector3(o.target[0] - o.pos[0], o.target[1] - o.pos[1], o.target[2] - o.pos[2])
@@ -70,30 +73,22 @@ function shot(o: {
   }
 }
 
-const { bells, dumbbells, stacks } = STATIONS
+const { bells, dumbbells } = STATIONS
 
 export const SHOTS = {
   // black frame before the lights come on
-  dark: shot({ pools: 0, pos: up([4.15, 0.44, 2.55]), target: up([0.15, 0.3, 0.25]), light: [0.1, 3.4, -0.85], lightTarget: up([0.15, 0, 0.1]), focus: up([0.78, 0.225, 0]), key: 0, fill: 0, rim: 0, wall: 0, blur: 1 }),
+  dark: shot({ frame: 0.1, pools: 0, pos: up([4.15, 0.44, 2.55]), target: up([0.15, 0.3, 0.25]), light: [0.1, 3.4, -0.85], lightTarget: up([0.15, 0, 0.1]), focus: up([0.78, 0.225, 0]), key: 0, fill: 0, rim: 0, wall: 0, blur: 1 }),
   // hero: low on a long lens, plate height
-  hero: shot({ pos: up([3.25, 0.36, 1.95]), target: up([0.02, 0.3, 0.22]), light: [0.1, 3.4, -0.85], lightTarget: up([0.15, 0, 0.1]), focus: up([0.78, 0.225, 0]) }),
+  hero: shot({ frame: 0.1, pos: up([3.25, 0.36, 1.95]), target: up([0.02, 0.3, 0.22]), light: [0.1, 3.4, -0.85], lightTarget: up([0.15, 0, 0.1]), focus: up([0.78, 0.225, 0]) }),
   // philosophy: macro along the sleeve into the knurl, light pulled down
   macro: shot({ pos: up([0.42, 0.2, 0.42]), target: up([0.56, 0.31, -0.08]), light: [0.9, 2.8, -0.9], lightTarget: up([0.6, 0.2, 0]), focus: up([0.6, 0.225, 0.0]), key: 0.6, fill: 0.35, rim: 1, wall: 0, blur: 1, warm: 0.35 }),
-  // philosophy, later: jib up into darkness above the bar
-  above: shot({ pos: up([-0.6, 2.4, 2.6]), target: up([0, 0.15, 0]), light: [0, 3.4, -0.4], focus: up([0, 0.2, 0]), key: 0.38, fill: 0.35, rim: 0.4, wall: 0.2, blur: 0.4, fog: [4.5, 15] }),
   // programs
-  strength: shot({ frame: 0.12, pos: up([-1.9, 1.1, 1.55]), target: up([0.15, 0.22, -0.05]), light: [-0.3, 3.4, -0.7], focus: up([-0.75, 0.225, 0]), key: 1, warm: 0.2 }),
-  conditioning: shot({ frame: 0.1, pos: add(bells, [1.45, 0.42, 0.95]), target: add(bells, [0, 0.16, 0]), light: add(bells, [-0.2, 3.3, -0.7]), lightTarget: add(bells, [0, 0, 0]), key: 1, blur: 0.4 }),
-  personal: shot({ frame: 0.1, pos: add(dumbbells, [1.35, 0.5, 1.05]), target: add(dumbbells, [0, 0.08, 0]), light: add(dumbbells, [0.2, 3.3, -0.8]), lightTarget: add(dumbbells, [0, 0, 0]), key: 1, blur: 0.4 }),
-  recovery: shot({ frame: 0.12, pos: add(bells, [0.62, 0.36, 0.72]), target: add(bells, [0.02, 0.22, 0]), light: add(bells, [0.6, 2.4, -0.4]), lightTarget: add(bells, [0, 0.1, 0]), focus: add(bells, [0, 0.25, 0]), key: 0.5, fill: 0.3, rim: 0.6, wall: 0.1, warm: 0.8, blur: 0.9 }),
-  // the floor: high wide establishing shot of the whole set
-  wide: shot({ pos: [6.4, 3.3, 5.9], target: [-0.2, 0, 0], light: [0, 4.6, 0], lightTarget: [0, 0, 0], key: 1, fill: 1, rim: 0.8, wall: 0.8, blur: 0.05, fog: [9, 22], cone: 0.7, pools: 1 }),
-  // coaching: slow, low pass behind the dumbbells, set dimmed under the photographs
-  coaches: shot({ pos: add(dumbbells, [-1.4, 0.55, 1.7]), target: add(dumbbells, [0.6, 0.12, 0.2]), light: add(dumbbells, [0, 3.4, -0.6]), lightTarget: add(dumbbells, [0, 0, 0]), key: 0.45, fill: 0.35, rim: 0.5, wall: 0.2, blur: 0.6 }),
-  // membership: three stacks — one, two and three plates
-  membership: shot({ frame: 0.0, pos: add(stacks, [0.15, 1.15, 2.85]), target: add(stacks, [0, 0.1, 0]), light: add(stacks, [0, 3.4, -0.5]), lightTarget: add(stacks, [0, 0, 0]), focus: add(stacks, [0, 0.1, 0]), key: 1, blur: 0.2 }),
-  // finale: straight down on the bar
-  finale: shot({ pos: up([0.0, 4.1, 0.55]), target: up([0, 0, 0]), light: [0, 3.6, -0.3], lightTarget: up([0, 0, 0]), focus: up([0, 0.2, 0]), key: 1, fill: 0.8, rim: 0.4, wall: 0, blur: 0.1 }),
+  strength: shot({ frame: 0.24, pos: up([-1.9, 1.1, 1.55]), target: up([0.15, 0.22, -0.05]), light: [-0.3, 3.4, -0.7], focus: up([-0.75, 0.225, 0]), key: 1, warm: 0.2 }),
+  conditioning: shot({ frame: 0.2, pos: add(bells, [1.45, 0.42, 0.95]), target: add(bells, [0, 0.16, 0]), light: add(bells, [-0.2, 3.3, -0.7]), lightTarget: add(bells, [0, 0, 0]), key: 1, blur: 0.4 }),
+  personal: shot({ frame: 0.2, pos: add(dumbbells, [1.35, 0.5, 1.05]), target: add(dumbbells, [0, 0.08, 0]), light: add(dumbbells, [0.2, 3.3, -0.8]), lightTarget: add(dumbbells, [0, 0, 0]), key: 1, blur: 0.4 }),
+  recovery: shot({ frame: 0.22, pos: add(bells, [0.62, 0.36, 0.72]), target: add(bells, [0.02, 0.22, 0]), light: add(bells, [0.6, 2.4, -0.4]), lightTarget: add(bells, [0, 0.1, 0]), focus: add(bells, [0, 0.25, 0]), key: 0.5, fill: 0.3, rim: 0.6, wall: 0.1, warm: 0.8, blur: 0.9 }),
+  // finale: the bookend. Back on the bar from the other side, lower and warmer. Subject sits right so the sign-off reads on the left.
+  finale: shot({ frame: 0.27, pos: up([-3.35, 0.34, 2.6]), target: up([0.05, 0.28, 0.12]), light: [0.2, 3.4, -0.7], lightTarget: up([-0.1, 0, 0.1]), focus: up([-0.78, 0.225, 0]), key: 1, fill: 0.7, rim: 1.1, wall: 0.6, warm: 0.5, blur: 0.3 }),
 } satisfies Record<string, Shot>
 
 export type ShotName = keyof typeof SHOTS
@@ -101,8 +96,10 @@ export type ShotName = keyof typeof SHOTS
 export const stage = {
   /** live rig values, tweened between shots by scroll */
   cam: { ...SHOTS.dark } as Shot,
-  /** roll of the overhead finale shot, radians */
+  /** roll of an overhead shot, radians (none in the current take) */
   camRoll: 0,
+  /** 0 → 1 as the sand pages cover the set; at 1 the canvas stops drawing */
+  veil: 0,
   /** pointer offset -1..1 */
   pointer: { x: 0, y: 0 },
   /** set by the canvas once assets are ready */

@@ -1,8 +1,8 @@
 /* ---------------------------------------------------------------
-   Kairos — styling system
+   Club 7 — styling system. Brass, chalk, one light (RESEARCH.md §3)
    --------------------------------------------------------------- */
 :root {
-  --ink: #0c0b0a;
+  --ink: #0d0c0b;
   --char: #161513;
   --char-2: #1d1c19;
   --line: rgba(235, 230, 221, 0.12);
@@ -10,9 +10,15 @@
   --steel: #8b8d8f;
   --bone: #ebe6dd;
   --bone-dim: rgba(235, 230, 221, 0.66);
-  --ember: #c4693f;
-  --red: #d4161c;
-  --red-deep: #8e0b10;
+  /* the club's own materials: brass grid metalwork, sand walls, the amber C7 mark */
+  --brass: #c29a5b;
+  --brass-deep: #8a6a38;
+  --amber: #f7a600;
+  --sand: #cbbda2;
+  --sand-ink: #1a1714;
+  --sand-dim: rgba(26, 23, 20, 0.72);
+  --sand-line: rgba(26, 23, 20, 0.16);
+  --sand-line-strong: rgba(26, 23, 20, 0.34);
 
   --f-display: 'Archivo Variable', 'Arial Narrow', sans-serif;
   --f-serif: 'Instrument Serif', 'Times New Roman', serif;
@@ -52,9 +58,9 @@ body {
 img { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
-::selection { background: var(--ember); color: var(--ink); }
+::selection { background: var(--brass); color: var(--ink); }
 
-:focus-visible { outline: 1px solid var(--ember); outline-offset: 4px; }
+:focus-visible { outline: 1px solid var(--brass); outline-offset: 4px; }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -167,10 +173,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .btn--solid { background: var(--bone); color: var(--ink); border-color: var(--bone); }
 .btn--solid:hover { background: transparent; color: var(--bone); }
 .btn--ghost:hover { border-color: var(--bone); }
-.btn--red {
-  background: var(--red); color: var(--bone); border-color: var(--red);
-}
-.btn--red:hover { background: transparent; color: var(--bone); }
+.btn--amber { background: var(--amber); color: var(--sand-ink); border-color: var(--amber); }
+.btn--amber:hover { background: transparent; color: var(--amber); }
 .text-link {
   font-size: 15px; font-weight: 500;
   background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;

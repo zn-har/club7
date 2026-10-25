@@ -139,9 +139,39 @@ function buildTake(moves: Move[]) {
   }
 }
 
+/**
+ * The sand veil: Club 7's own wall colour rises over the set as the visitor walks into the
+ * clubs, and lifts again for the finale. One trigger computes it from both ranges so the two
+ * fades can never fight; the canvas stops drawing while it's fully up (scene/Stage.tsx).
+ */
+function buildVeil() {
+  const el = document.querySelector<HTMLElement>('.veil')
+  if (!el) return () => {}
+  const rise = ScrollTrigger.create({ trigger: '.clubs', start: 'top 72%', end: 'top 18%' })
+  const fall = ScrollTrigger.create({ trigger: '.finale', start: 'top 62%', end: 'top 4%' })
+  const ramp = (y: number, t: ScrollTrigger) => Math.min(1, Math.max(0, (y - t.start) / Math.max(1, t.end - t.start)))
+  const apply = (y: number) => {
+    let v = ramp(y, rise) * (1 - ramp(y, fall))
+    if (RM) v = Math.round(v)
+    stage.veil = v
+    el.style.opacity = String(v)
+    el.style.visibility = v < 0.001 ? 'hidden' : 'visible'
+    // the nav follows the ground it sits on
+    document.documentElement.classList.toggle('veil-up', v > 0.5)
+  }
+  const driver = ScrollTrigger.create({ start: 0, end: 'max', onUpdate: (self) => apply(self.scroll()), onRefresh: (self) => apply(self.scroll()) })
+  apply(window.scrollY)
+  return () => {
+    rise.kill()
+    fall.kill()
+    driver.kill()
+  }
+}
+
 /** Registers every scroll-driven event. Returns a cleanup. */
 export function initChoreography() {
   let killTake = () => {}
+  let killVeil = () => {}
   const ctx = gsap.context(() => {
     // initial states for the intro (set here so no-JS / fallback stays visible)
     gsap.set('.hero .line-mask > span', { yPercent: 108 })
@@ -159,37 +189,26 @@ export function initChoreography() {
       },
     })
 
-    /* ---- The take: one camera, one light, through the set ---- */
+    /* ---- The take: one camera, one light, three moves ---- */
+    // Every move reveals something: the knurl, then the kit for each programme, then the bar
+    // again lit for the sign-off. Between programmes and finale the set rests under the veil.
     killTake = buildTake([
-      // hero → macro on the sleeve while the headline leaves
-      { from: 'hero', to: 'macro', trigger: '.hero', start: 'top top', endTrigger: '.philosophy', end: 'top 10%' },
-      // philosophy: macro → jib up as the photographs arrive
-      { from: 'macro', to: 'above', trigger: '.philosophy__images', start: 'top bottom', end: 'top 20%' },
-      // programs: down to whichever station's tab is picked
-      { from: 'above', to: 'program', trigger: '.programs', start: 'top bottom', end: 'top 25%' },
-      // the floor: crane up to the wide
-      { from: 'program', to: 'wide', trigger: '.facility', start: 'top bottom', end: 'top top' },
-      // coaching: low pass behind the dumbbells
-      { from: 'wide', to: 'coaches', trigger: '.coaches', start: 'top bottom', end: 'top top' },
-      // membership: the three stacks
-      { from: 'coaches', to: 'membership', trigger: '.membership', start: 'top bottom', end: 'top top' },
-      // finale: straight down on the bar
-      { from: 'membership', to: 'finale', trigger: '.finale', start: 'top bottom', end: 'top top' },
+      // hero holds for the first fifth of a screen, then slides along the bar into the knurl
+      { from: 'hero', to: 'macro', trigger: '.hero', start: 'top -22%', endTrigger: '.philosophy', end: 'top 15%' },
+      // programmes: down to whichever station's tab is picked
+      { from: 'macro', to: 'program', trigger: '.programs', start: 'top bottom', end: 'top 25%' },
+      // hidden under the veil: reset to the finale bookend so it is already composed when revealed
+      { from: 'program', to: 'finale', trigger: '.membership', start: 'top bottom', end: 'bottom bottom' },
     ])
-    if (!RM) {
-      gsap.to(stage, {
-        camRoll: 0.08,
-        ease: 'none',
-        scrollTrigger: { trigger: '.finale', start: 'top top', end: 'bottom bottom', scrub: 1.5 },
-      })
-    }
+    killVeil = buildVeil()
 
     /* 1  Hero type drifts up and away */
     gsap.to('.hero__inner', {
       yPercent: RM ? 0 : -18,
       opacity: 0,
       ease: 'none',
-      scrollTrigger: { trigger: '.hero', start: RM ? '30% top' : 'top top', end: 'bottom 20%', scrub: true },
+      // holds while the frame holds, leaves as the camera starts to move
+      scrollTrigger: { trigger: '.hero', start: RM ? '30% top' : 'top -12%', end: 'bottom 25%', scrub: true },
     })
 
     /* 2  Philosophy statement: words come up as they are read */
@@ -260,19 +279,11 @@ export function initChoreography() {
       })
     }
 
-    /* 6  Featured tier hairline draws in */
-    if (document.querySelector('.tiers')) gsap.from('.tier--featured .tier__hairline', {
-      scaleX: 0,
-      transformOrigin: 'left center',
-      duration: RM ? 0 : 1.4,
-      ease: 'expo.inOut',
-      scrollTrigger: { trigger: '.tiers', start: 'top 75%', toggleActions: 'play none none none' },
-    })
-
   })
 
   return () => {
     killTake()
+    killVeil()
     ctx.revert()
   }
 }

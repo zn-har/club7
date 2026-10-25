@@ -5,6 +5,7 @@ import { BlendFunction, Effect, EffectPass, ToneMappingMode, type DepthOfFieldEf
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { NoToneMapping, Vector3, WebGLRenderTarget } from 'three'
 import { initialTier, isCoarsePointer, prefersReducedMotion } from '../lib/env'
+import { gsap } from '../motion/scroll'
 import { Barbell, PLATE_R } from './Barbell'
 import { CameraRig } from './CameraRig'
 import { Lighting } from './Lighting'
@@ -77,6 +78,27 @@ function SanitizePass() {
   const pass = useMemo(() => new EffectPass(camera, new SanitizeEffect()), [camera])
   useEffect(() => () => pass.dispose(), [pass])
   return <primitive object={pass} />
+}
+
+/**
+ * While the sand pages fully cover the set nothing of it is visible, so stop drawing: the GPU
+ * idles through the middle of the page and the take resumes the moment the veil lifts.
+ */
+function VeilPause() {
+  const setFrameloop = useThree((s) => s.setFrameloop)
+  useEffect(() => {
+    let paused = false
+    const tick = () => {
+      const next = stage.veil > 0.995
+      if (next === paused) return
+      paused = next
+      // demand, not never: a resize or first layout still draws a correctly sized frame
+      setFrameloop(paused ? 'demand' : 'always')
+    }
+    gsap.ticker.add(tick)
+    return () => gsap.ticker.remove(tick)
+  }, [setFrameloop])
+  return null
 }
 
 /** Built once for the startup tier: rebuilding the chain mid-scroll renders a raw frame (a flash). */
@@ -188,6 +210,7 @@ export default function Stage() {
         <CameraRig parallax={!isCoarsePointer && !prefersReducedMotion} />
         <Effects tier={tier} />
         <Ready />
+        <VeilPause />
       </Suspense>
     </Canvas>
   )
