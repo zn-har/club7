@@ -70,7 +70,7 @@ writer means fast scrolls and anchor jumps can never race two moves.
 
 | # | Section | Shot / visual event | Trigger (scroll range) | Duration | Easing | Transition |
 |---|---|---|---|---|---|---|
-| 0 | Loader | Wordmark, hairline tied to real asset loading | page load | until loaded, min 1.2 s | linear | fades 0.9 s power2.inOut |
+| 0 | Loader | Wordmark rises letter by letter, hairline tied to real asset loading | page load | until loaded, min 1.4 s | expo.out | mark lifts away, frame wipes up 1.1 s expo.inOut as the intro starts |
 | 0 | Intro | `dark → hero`: key light strikes (one flicker), fill/rim follow, 0.9 m dolly-in, focus rack | loader done | 4.2 s | steps → power2/3.out | yields instantly if the visitor scrolls |
 | 1 | Hero | Headline lines rise from masks (0.12 s stagger), copy + CTAs fade up | 1.3 s into intro | 1.3 s | expo.out | pointer parallax ≈ 2 cm × distance |
 | 1→2 | Hero exit | `hero → macro`: camera slides along the bar into the knurl; DOF opens to macro | hero top → philosophy top 10% | scrubbed | sine.inOut | headline drifts up 18% and fades |
