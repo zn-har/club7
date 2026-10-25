@@ -12,10 +12,20 @@ const LINKS = [
 export function Nav() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [hidden, setHidden] = useState(false)
   const wasOpen = useRef(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > window.innerHeight * 0.6)
+    let lastY = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      setScrolled(y > window.innerHeight * 0.6)
+      const dy = y - lastY
+      // a few px of slack so trackpad jitter doesn't toggle it
+      if (Math.abs(dy) < 6) return
+      setHidden(dy > 0 && y > 80)
+      lastY = y
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -37,7 +47,7 @@ export function Nav() {
   }
 
   return (
-    <header className={`nav ${scrolled ? 'is-scrolled' : ''} ${open ? 'is-open' : ''}`} data-intro>
+    <header className={`nav ${scrolled ? 'is-scrolled' : ''} ${open ? 'is-open' : ''} ${hidden && !open ? 'is-hidden' : ''}`} data-intro>
       <a href="#top" className="nav__mark" onClick={go('#top')} aria-label="Club 7 Fitness & Gym, back to top">
         <span className="display">Club 7</span>
         <span className="meta">Fitness &amp; Gym</span>

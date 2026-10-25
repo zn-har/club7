@@ -128,6 +128,8 @@ export function getPlateDecal(weight: string) {
   // wear: knock back the print with noise so it does not look freshly printed
   const img = ctx.getImageData(0, 0, size, size)
   for (let i = 0; i < img.data.length; i += 4) {
+    // most of the face is bare: skip the noise where there's no ink
+    if (img.data[i + 3] === 0) continue
     const x = (i / 4) % size, y = Math.floor(i / 4 / size)
     const wear = valueNoise(x / 6, y / 6, 4096) * 0.55 + valueNoise(x / 40, y / 40, 4096) * 0.45
     img.data[i + 3] *= Math.min(1, Math.max(0, (wear - 0.18) * 1.7))

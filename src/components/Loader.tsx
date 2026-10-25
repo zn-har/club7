@@ -4,7 +4,7 @@ import { hasWebGL, prefersReducedMotion } from '../lib/env'
 import { gsap, lockScroll } from '../motion/scroll'
 import { stage } from '../scene/state'
 
-const MIN_TIME = 1200
+const MIN_TIME = 500
 
 /** Black frame, wordmark, a hairline tied to real asset loading. Lifts once the set is lit-ready. */
 export function Loader({ onDone }: { onDone: () => void }) {
@@ -20,7 +20,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
     const onReady = () => setReady(true)
     window.addEventListener('stage:ready', onReady)
     // never trap the visitor behind a loader
-    const bail = window.setTimeout(onReady, 15000)
+    const bail = window.setTimeout(onReady, 6000)
     return () => {
       window.removeEventListener('stage:ready', onReady)
       window.clearTimeout(bail)
@@ -34,7 +34,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
     Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, Math.max(0, MIN_TIME - performance.now())))]).then(() => {
       gsap.to(root.current, {
         opacity: 0,
-        duration: prefersReducedMotion ? 0.3 : 0.9,
+        duration: prefersReducedMotion ? 0.3 : 0.5,
         ease: 'power2.inOut',
         onComplete: () => {
           lockScroll(false)

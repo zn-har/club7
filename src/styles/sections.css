@@ -17,7 +17,8 @@
 /* ---------------------------------------------------------------
    Stage (fixed 3D canvas)
    --------------------------------------------------------------- */
-.stage { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+/* large-viewport height: the mobile URL bar showing/hiding must not resize the canvas (a flash) */
+.stage { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: 0; pointer-events: none; }
 .stage canvas { display: block; }
 main { position: relative; z-index: 1; }
 
@@ -29,8 +30,10 @@ main { position: relative; z-index: 1; }
   height: var(--nav-h);
   display: flex; align-items: center; gap: 40px;
   padding-inline: var(--gutter);
-  transition: background 0.6s var(--ease-out);
+  transition: background 0.6s var(--ease-out), translate 0.45s var(--ease-out);
 }
+/* tucked away while reading down the page; back on any scroll up */
+.nav.is-hidden { translate: 0 -100%; } /* translate, not transform: the intro tween owns the inline transform */
 .nav.is-scrolled {
   background: var(--ink);
   border-bottom: 1px solid var(--line);
@@ -101,14 +104,6 @@ main { position: relative; z-index: 1; }
 /* ---------------------------------------------------------------
    Philosophy
    --------------------------------------------------------------- */
-/* reading scrim: the set stays visible at the section edges, never under paragraphs */
-.philosophy, .coaches, .membership, .facility { isolation: isolate; }
-.philosophy::before, .coaches::before, .membership::before, .facility::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: rgba(12, 11, 10, 0.62);
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18vh, #000 calc(100% - 18vh), transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 18vh, #000 calc(100% - 18vh), transparent);
-}
 .philosophy { padding-bottom: clamp(56px, 8vh, 100px); }
 .philosophy__intro { min-height: 70vh; align-content: center; }
 .philosophy__statement { grid-column: 1 / span 9; font-size: clamp(36px, 4.8vw, 86px); line-height: 0.95; }
@@ -133,11 +128,6 @@ main { position: relative; z-index: 1; }
    text holds the left, the camera frames the kit on the right.
    --------------------------------------------------------------- */
 .programs { position: relative; min-height: 100vh; min-height: 100svh; padding-block: clamp(56px, 8vh, 100px); }
-.programs::before {
-  /* local scrim so copy stays legible over the set */
-  content: ''; position: absolute; inset: 0 auto 0 0; width: 62%; pointer-events: none;
-  background: linear-gradient(90deg, rgba(12, 11, 10, 0.9), rgba(12, 11, 10, 0.66) 55%, rgba(12, 11, 10, 0));
-}
 .programs__inner { position: relative; display: grid; gap: clamp(24px, 4vh, 40px); }
 .programs__tabs { display: flex; flex-wrap: wrap; gap: 8px; }
 .programs__tabs button {
@@ -351,7 +341,6 @@ main { position: relative; z-index: 1; }
   .principles__list { grid-template-columns: 1fr; gap: 40px; }
 
   .program { grid-template-columns: 1fr; }
-  .programs::before { width: 100%; background: linear-gradient(180deg, rgba(12, 11, 10, 0.85), rgba(12, 11, 10, 0.55) 55%, rgba(12, 11, 10, 0.2)); }
   .programs__tabs { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); scrollbar-width: none; }
   .programs__tabs button { flex: none; }
   .program__inset { display: none; }

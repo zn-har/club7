@@ -4,6 +4,8 @@ import Lenis from 'lenis'
 import { prefersReducedMotion } from '../lib/env'
 
 gsap.registerPlugin(ScrollTrigger)
+// the mobile URL bar resizes the viewport on every direction change; refreshing then jolts the take
+ScrollTrigger.config({ ignoreMobileResize: true })
 
 let lenis: Lenis | null = null
 

@@ -1,7 +1,6 @@
-import { useTexture } from '@react-three/drei'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
-import { BackSide, MathUtils, ShaderMaterial, SRGBColorSpace } from 'three'
+import { BackSide, ImageBitmapLoader, MathUtils, ShaderMaterial, SRGBColorSpace, Texture } from 'three'
 import { isSmallScreen, prefersReducedMotion } from '../lib/env'
 
 /**
@@ -36,10 +35,18 @@ const frag = /* glsl */ `
 `
 
 function Sphere() {
-  const tex = useTexture(isSmallScreen ? '/hdri/gym_pano_2k.jpg' : '/hdri/gym_pano_4k.jpg')
+  // decoded off the main thread: uploading an <img> decodes it synchronously on first draw,
+  // a 120ms freeze mid-scroll for the 4k image
+  const bitmap = useLoader(ImageBitmapLoader, isSmallScreen ? '/hdri/gym_pano_2k.jpg' : '/hdri/gym_pano_4k.jpg', (l) =>
+    l.setOptions({ imageOrientation: 'flipY' }),
+  )
+  const tex = useMemo(() => new Texture(bitmap), [bitmap])
   const material = useMemo(() => {
     tex.colorSpace = SRGBColorSpace
     tex.anisotropy = 8
+    // ImageBitmaps ignore flipY; the loader already flipped it
+    tex.flipY = false
+    tex.needsUpdate = true
     return new ShaderMaterial({ uniforms: { map: { value: tex } }, vertexShader: vert, fragmentShader: frag, side: BackSide })
   }, [tex])
   return (

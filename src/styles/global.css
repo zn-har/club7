@@ -31,6 +31,9 @@
 *::after { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
+/* page still scrolls (wheel, touch, keys); the bar itself is hidden */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 
