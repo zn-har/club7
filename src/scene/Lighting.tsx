@@ -87,7 +87,7 @@ function makeHaze() {
  * station in shot (the key), a cool rim strip behind, a grazing wash on the back wall, and
  * the real gym HDRI under it all. A faint haze cone hangs off the key.
  */
-export function Lighting({ shadowSize }: { shadowSize: number }) {
+export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lite?: boolean }) {
   const key = useRef<SpotLight>(null)
   const wall = useRef<SpotLight>(null)
   const rim = useRef<RectAreaLight>(null)
@@ -117,7 +117,8 @@ export function Lighting({ shadowSize }: { shadowSize: number }) {
     k.color.copy(NEUTRAL).lerp(TUNGSTEN, c.warm)
     rim.current!.intensity = c.rim * 7
     wall.current!.intensity = c.wall * 55
-    scene.environmentIntensity = c.fill * 0.32
+    // without the battens' own light the room's HDRI carries the top fill
+    scene.environmentIntensity = c.fill * (lite ? 0.5 : 0.32)
     for (const p of pools.current) p.intensity = c.pools * 80
     for (const b of battens.current) b.intensity = c.fill * 14
 
@@ -150,10 +151,11 @@ export function Lighting({ shadowSize }: { shadowSize: number }) {
       />
       <mesh ref={haze} geometry={hazeParts.geo} material={hazeParts.mat} renderOrder={10} frustumCulled={false} />
       <rectAreaLight ref={rim} position={[-1.6, 1.3, -2.2]} width={3.2} height={0.6} color="#dfe8f2" />
-      {/* fluorescent battens: the fitting itself (bright enough to bloom) and the light it throws */}
+      {/* fluorescent battens: the fitting itself (bright enough to bloom) and the light it throws.
+          Area lights are priced per pixel on every lit surface; integrated graphics keep only the fittings */}
       {BATTENS.map(([x, z, ry], i) => (
         <group key={i} position={[x, BATTEN_Y, z]} rotation-y={ry}>
-          <rectAreaLight
+          {!lite && <rectAreaLight
             ref={(l) => {
               if (l) battens.current[i] = l
             }}
@@ -161,7 +163,7 @@ export function Lighting({ shadowSize }: { shadowSize: number }) {
             width={1.5}
             height={0.14}
             color={FLUORESCENT}
-          />
+          />}
           <mesh position-y={0.02}>
             <boxGeometry args={[1.52, 0.035, 0.16]} />
             <meshBasicMaterial color={TUBE} toneMapped={false} />

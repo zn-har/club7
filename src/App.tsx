@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect } from 'react'
 import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
-import { hasWebGL } from './lib/env'
+import { useStageOn } from './lib/env'
 import { initChoreography, playIntro } from './motion/choreography'
 import { initSmoothScroll, scrollToTarget, ScrollTrigger } from './motion/scroll'
 import { Clubs } from './sections/Clubs'
@@ -16,6 +16,7 @@ import './styles/sections.css'
 const Stage = lazy(() => import('./scene/Stage'))
 
 export default function App() {
+  const stageOn = useStageOn()
   useLayoutEffect(() => initChoreography(), [])
   useEffect(() => initSmoothScroll(), [])
 
@@ -48,7 +49,7 @@ export default function App() {
         Skip to content
       </a>
       <Loader onDone={onLoaded} />
-      {hasWebGL && (
+      {stageOn && (
         <div className="stage" aria-hidden>
           <Suspense fallback={null}>
             <Stage />

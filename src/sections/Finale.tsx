@@ -1,13 +1,14 @@
 import { Button } from '../components/Button'
 import { Lines } from '../components/Lines'
 import { Photo } from '../components/Photo'
-import { hasWebGL } from '../lib/env'
+import { useStageOn } from '../lib/env'
 
 export function Finale() {
+  const stageOn = useStageOn()
   return (
     <>
       <section className="finale" aria-labelledby="finale-title">
-        {!hasWebGL && <Photo name="barbell-bw" alt="A loaded barbell resting on the gym floor" className="finale__fallback" reveal={false} />}
+        {!stageOn &&<Photo name="barbell-bw" alt="A loaded barbell resting on the gym floor" className="finale__fallback" reveal={false} />}
         <div className="finale__scrim" aria-hidden />
         <div className="finale__sticky wrap">
           <p className="meta" data-reveal="fade">

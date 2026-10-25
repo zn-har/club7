@@ -4,7 +4,7 @@ import { Bloom, DepthOfField, EffectComposer, N8AO, Noise, ToneMapping, Vignette
 import { BlendFunction, Effect, EffectPass, ToneMappingMode, type DepthOfFieldEffect } from 'postprocessing'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { NoToneMapping, Vector3, WebGLRenderTarget } from 'three'
-import { initialTier, isCoarsePointer, prefersReducedMotion } from '../lib/env'
+import { initialTier, isCoarsePointer, prefersReducedMotion, stageStruggling } from '../lib/env'
 import { gsap } from '../motion/scroll'
 import { Barbell, PLATE_R } from './Barbell'
 import { CameraRig } from './CameraRig'
@@ -114,8 +114,9 @@ function Effects({ tier }: { tier: 'high' | 'low' }) {
   })
   return (
     <EffectComposer multisampling={tier === 'high' ? 4 : 0} enableNormalPass={false}>
-      {/* contact occlusion only: a wide radius paints game-y halos round everything */}
-      <N8AO aoRadius={0.18} intensity={1.3} distanceFalloff={0.4} quality={tier === 'high' ? 'medium' : 'performance'} halfRes={tier === 'low'} />
+      {/* contact occlusion only: a wide radius paints game-y halos round everything.
+          Integrated graphics skip it: it is the costliest pass, and the contact shadows carry the look */}
+      {tier === 'high' ? <N8AO aoRadius={0.18} intensity={1.3} distanceFalloff={0.4} quality="medium" /> : <></>}
       <SanitizePass />
       {tier === 'high' ? <DepthOfField ref={dof} worldFocusRange={0.7} bokehScale={2} resolutionScale={0.5} /> : <></>}
       {/* the bokeh blur itself emits NaN at the frame edge now and then (traced per pass): scrub
@@ -165,11 +166,42 @@ function Set() {
   )
 }
 
+/**
+ * If the set can't hold a scrollable frame rate (a weak GPU the startup check missed), hand the
+ * page to the photographs rather than stutter through it. Measured only once the loader is
+ * gone and only while frames are actually being drawn.
+ */
+function FrameWatch() {
+  const w = useRef({ warm: 0, time: 0, frames: 0, bad: 0 })
+  useFrame((_, delta) => {
+    const s = w.current
+    // the first frame back from a paused loop or a hidden tab isn't the GPU's fault
+    if (!stage.ready || delta > 1) return
+    // warm-up: late shader compiles and the intro move are allowed to be slow
+    if (s.warm < WARMUP) {
+      s.warm += delta
+      return
+    }
+    s.time += delta
+    s.frames++
+    if (s.time < SAMPLE) return
+    s.bad = s.frames / s.time < MIN_FPS ? s.bad + 1 : 0
+    s.time = s.frames = 0
+    // three slow samples in a row, not one bad moment
+    if (s.bad >= 3) stageStruggling()
+  })
+  return null
+}
+const WARMUP = 3
+const SAMPLE = 2
+const MIN_FPS = 22
+
 /** One persistent canvas behind the whole page. */
 export default function Stage() {
   const tier = initialTier
-  // fixed for the session: a dpr change resizes every render target mid-scroll, a full-frame flash
-  const dpr = initialTier === 'high' ? 1.5 : 1.25
+  // fixed for the session: a dpr change resizes every render target mid-scroll, a full-frame flash.
+  // Laptops on integrated graphics draw at 1:1; phones keep a little extra for their dense screens
+  const dpr = tier === 'high' ? 1.5 : isCoarsePointer ? 1.25 : 1
 
   useEffect(() => {
     if (isCoarsePointer || prefersReducedMotion) return
@@ -205,12 +237,13 @@ export default function Stage() {
       {/* fixed at startup: toggling it later recompiles every shadowed material mid-scroll */}
       {initialTier === 'high' && <SoftShadows size={46} samples={14} focus={0.35} />}
       <Suspense fallback={null}>
-        <Lighting shadowSize={tier === 'high' ? 2048 : 1024} />
+        <Lighting shadowSize={tier === 'high' ? 2048 : 1024} lite={tier === 'low'} />
         <Set />
         <CameraRig parallax={!isCoarsePointer && !prefersReducedMotion} />
         <Effects tier={tier} />
         <Ready />
         <VeilPause />
+        <FrameWatch />
       </Suspense>
     </Canvas>
   )

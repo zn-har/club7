@@ -1,12 +1,13 @@
 import { Button } from '../components/Button'
 import { Photo } from '../components/Photo'
-import { hasWebGL } from '../lib/env'
+import { useStageOn } from '../lib/env'
 
 export function Hero() {
+  const stageOn = useStageOn()
   return (
     <>
       <section className="hero" id="top" aria-labelledby="hero-title">
-        {!hasWebGL && (
+        {!stageOn && (
           <Photo name="barbell-man" alt="An athlete stands beside a loaded barbell in a dark gym" className="hero__fallback" reveal={false} eager />
         )}
         {/* keeps the type legible over the lit set without boxing it in */}
