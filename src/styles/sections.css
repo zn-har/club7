@@ -389,4 +389,32 @@ main { position: relative; z-index: 1; }
   .philosophy::before, .programs::before { background: rgba(13, 12, 11, 0.58); }
 
   .footer__col, .footer__col:last-child { grid-column: 1 / -1 !important; }
+
+  /* thumbs, not cursors: every link and control gets a ~44px hit area */
+  .nav__toggle { width: 44px; height: 44px; margin: -10px -10px -10px 0; }
+  .nav__mark { padding-block: 10px; margin-block: -5px; }
+  .programs__tabs { scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); }
+  .programs__tabs button { scroll-snap-align: start; }
+  .visit__phone { padding-block: 6px; }
+  .visit__club .text-link { display: inline-block; padding-top: 12px; }
+  .footer__col a { display: inline-block; padding-block: 8px; }
+  .footer__col address, .footer__col p:not(.meta) { line-height: 1.5; }
+}
+
+/* touch phones: a tap must not leave a button stuck in its hover state (desktop untouched) */
+@media (max-width: 820px) and (hover: none) {
+  .btn--solid:hover { background: var(--bone); color: var(--ink); }
+  .btn--amber:hover { background: var(--amber); color: var(--sand-ink); }
+  .btn--ink:hover { background: var(--sand-ink); color: var(--sand); }
+  .btn--ghost:hover { border-color: var(--line-strong); }
+  .btn:hover .arrow { width: 22px; }
+  .text-link:hover { background-size: 100% 1px; }
+  .nav__links nav a:hover::before,
+  .nav__toggle:hover .nav__dots::before { opacity: 0; }
+  .nav__toggle:hover .nav__dots i { transform: none; }
+  .club:hover { border-color: var(--sand-line-strong); }
+  .club.is-active:hover { border-color: var(--sand-ink); }
+  .nav__cta:hover { background: transparent; color: var(--amber); }
+  .nav__menu li a:hover { color: var(--bone); }
+  a, button, label { -webkit-tap-highlight-color: transparent; }
 }

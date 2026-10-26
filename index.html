@@ -8,7 +8,8 @@
     <meta name="theme-color" content="#0c0b0a" />
     <meta name="description" content="Club Seven Fitness &amp; Gym in Sultan Bathery, Wayanad and Al Quoz Mall, Dubai. Certified trainers, personal plans, free weights, cardio and group sessions." />
     <title>Club 7 | Strength &amp; Fitness Gym in Wayanad and Dubai</title>
-    <link rel="preload" href="/hdri/gym_01_1k.hdr" as="fetch" crossorigin />
+    <!-- phones never draw the set (src/lib/env.ts), so they skip its lighting too -->
+    <link rel="preload" href="/hdri/gym_01_1k.hdr" as="fetch" crossorigin media="(min-width: 820px)" />
     <!-- the loader is plain HTML so the mark is on the first paint, before any script runs;
          src/components/Loader.tsx drives it once the app is up -->
     <style>

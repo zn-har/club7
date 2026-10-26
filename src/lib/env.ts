@@ -57,7 +57,9 @@ function lowerOf(a: Tier, b: Tier | null): Tier {
   return b && TIERS.indexOf(b) > TIERS.indexOf(a) ? b : a
 }
 
-const gpuTier: Tier = typeof window === 'undefined' ? 'none' : lowerOf(detectGPU(), rememberedTier())
+// phones get the photographs: the set costs battery and data for a frame they barely see
+const gpuTier: Tier =
+  typeof window === 'undefined' || isSmallScreen ? 'none' : lowerOf(detectGPU(), rememberedTier())
 
 /** The 3D set runs at all; without it the hero and finale fall back to photographs. */
 export const hasWebGL = gpuTier !== 'none'
