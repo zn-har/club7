@@ -10,7 +10,6 @@ const LINKS = [
 
 export function Nav() {
   const [open, setOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const [hidden, setHidden] = useState(false)
   const wasOpen = useRef(false)
 
@@ -18,7 +17,6 @@ export function Nav() {
     let lastY = window.scrollY
     const onScroll = () => {
       const y = window.scrollY
-      setScrolled(y > window.innerHeight * 0.6)
       const dy = y - lastY
       // a few px of slack so trackpad jitter doesn't toggle it
       if (Math.abs(dy) < 6) return
@@ -46,34 +44,47 @@ export function Nav() {
   }
 
   return (
-    <header className={`nav ${scrolled ? 'is-scrolled' : ''} ${open ? 'is-open' : ''} ${hidden && !open ? 'is-hidden' : ''}`} data-intro>
-      <a href="#top" className="nav__mark" onClick={go('#top')} aria-label="Club 7 Fitness & Gym, back to top">
-        <img src="/c7-mark.png" alt="" width="46" height="30" />
-        <span className="display">Club 7</span>
-      </a>
-      <nav aria-label="Primary" className="nav__links" id="primary-nav">
+    <>
+      <header className={`nav ${open ? 'is-open' : ''} ${hidden && !open ? 'is-hidden' : ''}`} data-intro>
+        <a href="#top" className="nav__mark" onClick={go('#top')} aria-label="Club 7 Fitness & Gym, back to top">
+          Club 7 Fitness &amp; Gym
+        </a>
+        <div className="nav__links">
+          <nav aria-label="Primary">
+            {LINKS.map(([href, label]) => (
+              <a key={href} href={href} onClick={go(href)} tabIndex={open ? -1 : undefined}>
+                {label}
+              </a>
+            ))}
+          </nav>
+          <button
+            className="nav__toggle"
+            aria-expanded={open}
+            aria-controls="nav-menu"
+            onClick={() => setOpen((o) => !o)}
+          >
+            <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
+            <span className="nav__dots" aria-hidden>
+              <i /><i /><i /><i />
+            </span>
+          </button>
+        </div>
+      </header>
+      {/* outside the header: its backdrop-filter would trap a fixed child inside the bar */}
+      <div className={`nav__menu ${open ? 'is-open' : ''}`} id="nav-menu" aria-hidden={!open}>
         <ul>
           {LINKS.map(([href, label]) => (
             <li key={href}>
-              <a href={href} onClick={go(href)}>
+              <a href={href} onClick={go(href)} tabIndex={open ? undefined : -1}>
                 {label}
               </a>
             </li>
           ))}
         </ul>
-      </nav>
-      <a href="#membership" className="nav__cta" onClick={go('#membership')}>
-        Book a session
-      </a>
-      <button
-        className="nav__toggle"
-        aria-expanded={open}
-        aria-controls="primary-nav"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
-        <span className="nav__burger" aria-hidden />
-      </button>
-    </header>
+        <a href="#membership" className="nav__cta" onClick={go('#membership')} tabIndex={open ? undefined : -1}>
+          Book a session
+        </a>
+      </div>
+    </>
   )
 }

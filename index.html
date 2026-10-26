@@ -9,8 +9,53 @@
     <meta name="description" content="Club Seven Fitness &amp; Gym in Sultan Bathery, Wayanad and Al Quoz Mall, Dubai. Certified trainers, personal plans, free weights, cardio and group sessions." />
     <title>Club 7 | Strength &amp; Fitness Gym in Wayanad and Dubai</title>
     <link rel="preload" href="/hdri/gym_01_1k.hdr" as="fetch" crossorigin />
+    <!-- the loader is plain HTML so the mark is on the first paint, before any script runs;
+         src/components/Loader.tsx drives it once the app is up -->
+    <style>
+      .loader { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #0d0c0b; clip-path: inset(0% 0% 0% 0%); }
+      .loader__mark { position: relative; width: clamp(132px, 13vw, 200px); color: #f7a600; }
+      .loader__mark svg { display: block; width: 100%; height: auto; }
+      /* while the app boots only the ghost breathes: slow, low-contrast opacity hides a stalled frame */
+      .loader__ghost { opacity: 0.14; animation: loader-breathe 1.6s ease-in-out infinite alternate; }
+      @keyframes loader-breathe { from { opacity: 0.1; } to { opacity: 0.26; } }
+      /* the amber copy, uncovered left to right by two counter-moving transforms */
+      .loader__wipe { position: absolute; inset: 0; overflow: hidden; transform: translateX(-100%); }
+      .loader__wipe > svg { transform: translateX(100%); }
+      @media (prefers-reduced-motion: reduce) { .loader__ghost { animation: none; } }
+    </style>
+    <noscript><style>.loader { display: none; }</style></noscript>
   </head>
   <body>
+    <div class="loader" id="loader" role="status" aria-label="Loading">
+      <div class="loader__mark" aria-hidden="true">
+        <svg class="loader__ghost" viewBox="0 0 184 120" fill="currentColor">
+            <mask id="c7-cut-ghost" maskUnits="userSpaceOnUse" x="0" y="0" width="184" height="120"><rect width="184" height="120" fill="#fff" /><rect x="128" y="48" width="40" height="24" /><rect x="24" y="53" width="26.5" height="14" /></mask>
+            <g mask="url(#c7-cut-ghost)">
+              <path fill-rule="evenodd" d="M152 60A60 60 0 1 1 32 60A60 60 0 1 1 152 60ZM140.5 60A48.5 48.5 0 1 0 43.5 60A48.5 48.5 0 1 0 140.5 60Z" />
+              <path fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" d="M115.8 31.6A37 37 0 1 0 117.7 86.6" />
+              <path d="M46.4 41.3A49 49 0 0 0 46.4 78.7L58.5 73.7A36 36 0 0 1 58.5 46.3Z" />
+            </g>
+            <path d="M71 38H113C113 47.3 104.2 50.5 100.7 58.7C97.2 66.9 93.9 77.3 95 87H84C83.8 71.8 89.5 57.6 99 46H71Z" />
+            <rect x="20" y="33" width="10" height="54" rx="3" /><rect x="154" y="33" width="10" height="54" rx="3" />
+            <rect x="9" y="39" width="9" height="42" rx="3" /><rect x="166" y="39" width="9" height="42" rx="3" />
+            <path d="M0 50A8 10 0 0 1 0 70Z" /><path d="M184 50A8 10 0 0 0 184 70Z" />
+          </svg>
+        <div class="loader__wipe">
+          <svg viewBox="0 0 184 120" fill="currentColor">
+            <mask id="c7-cut-fill" maskUnits="userSpaceOnUse" x="0" y="0" width="184" height="120"><rect width="184" height="120" fill="#fff" /><rect x="128" y="48" width="40" height="24" /><rect x="24" y="53" width="26.5" height="14" /></mask>
+            <g mask="url(#c7-cut-fill)">
+              <path fill-rule="evenodd" d="M152 60A60 60 0 1 1 32 60A60 60 0 1 1 152 60ZM140.5 60A48.5 48.5 0 1 0 43.5 60A48.5 48.5 0 1 0 140.5 60Z" />
+              <path fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" d="M115.8 31.6A37 37 0 1 0 117.7 86.6" />
+              <path d="M46.4 41.3A49 49 0 0 0 46.4 78.7L58.5 73.7A36 36 0 0 1 58.5 46.3Z" />
+            </g>
+            <path d="M71 38H113C113 47.3 104.2 50.5 100.7 58.7C97.2 66.9 93.9 77.3 95 87H84C83.8 71.8 89.5 57.6 99 46H71Z" />
+            <rect x="20" y="33" width="10" height="54" rx="3" /><rect x="154" y="33" width="10" height="54" rx="3" />
+            <rect x="9" y="39" width="9" height="42" rx="3" /><rect x="166" y="39" width="9" height="42" rx="3" />
+            <path d="M0 50A8 10 0 0 1 0 70Z" /><path d="M184 50A8 10 0 0 0 184 70Z" />
+          </svg>
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
     <noscript><p style="color:#ebe6dd;background:#0c0b0a;padding:2rem;font-family:sans-serif">Club 7 Fitness &amp; Gym. Please enable JavaScript to view this site.</p></noscript>
     <script type="module" src="/src/main.tsx"></script>

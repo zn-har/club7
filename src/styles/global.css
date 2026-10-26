@@ -23,11 +23,12 @@
   --f-display: 'Archivo Variable', 'Arial Narrow', sans-serif;
   --f-serif: 'Instrument Serif', 'Times New Roman', serif;
   --f-text: 'Geist Variable', system-ui, sans-serif;
+  --f-mono: 'Geist Mono Variable', ui-monospace, monospace;
 
   --gutter: clamp(16px, 4vw, 64px);
   --col-gap: clamp(12px, 1.6vw, 28px);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --nav-h: 72px;
+  --nav-h: 84px; /* floating bar: 15px inset + 54px bar + air */
 
   color-scheme: dark;
 }

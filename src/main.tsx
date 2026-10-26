@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/archivo/wdth.css'
 import '@fontsource/instrument-serif/400-italic.css'
 import '@fontsource-variable/geist'
+import '@fontsource-variable/geist-mono'
 import './styles/global.css'
 import App from './App.tsx'
 
