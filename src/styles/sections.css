@@ -186,20 +186,25 @@ main { position: relative; z-index: 1; }
 .program__inset figcaption { margin-top: 10px; }
 
 /* ---------------------------------------------------------------
-   Sand: the club's own wall colour. A fixed veil rises over the set
-   (motion/choreography.ts, buildVeil) and these sections sit on it.
+   Middle pages. A fixed veil rises over the set (motion/choreography.ts,
+   buildVeil) and these sections sit on it. It used to be the club's sand
+   wall colour; it now stays in the site's dark ground, so inside .on-sand
+   the sand tokens are remapped onto the dark palette.
    --------------------------------------------------------------- */
-.veil { position: fixed; inset: 0; z-index: 0; background: var(--sand); opacity: 0; visibility: hidden; pointer-events: none; }
-.on-sand { color: var(--sand-ink); }
+.veil { position: fixed; inset: 0; z-index: 0; background: var(--ink); opacity: 0; visibility: hidden; pointer-events: none; }
+.on-sand {
+  --sand: var(--ink);
+  --sand-ink: var(--bone);
+  --sand-dim: var(--bone-dim);
+  --sand-line: var(--line);
+  --sand-line-strong: var(--line-strong);
+  color: var(--sand-ink);
+}
 .on-sand .meta { color: var(--sand-dim); }
 .on-sand .lede, .on-sand .body-copy { color: var(--sand-dim); }
 .on-sand .text-link { color: var(--sand-ink); }
 .on-sand :focus-visible { outline-color: var(--sand-ink); }
 .on-sand ::selection { background: var(--sand-ink); color: var(--sand); }
-/* the real rooms are warm: grade them down, never to grey */
-.on-sand .photo { background: #b6a68a; }
-.on-sand .photo img { filter: saturate(0.72) sepia(0.12) contrast(1.04) brightness(0.98); }
-.on-sand .photo::after { background: linear-gradient(180deg, rgba(26, 23, 20, 0) 70%, rgba(26, 23, 20, 0.18)); mix-blend-mode: multiply; }
 .btn--ink { background: var(--sand-ink); color: var(--sand); border-color: var(--sand-ink); }
 .btn--ink:hover { background: transparent; color: var(--sand-ink); }
 
@@ -261,7 +266,7 @@ main { position: relative; z-index: 1; }
 }
 .club:hover { border-color: var(--sand-ink); }
 .club.is-active { background: var(--sand-ink); color: var(--sand); border-color: var(--sand-ink); }
-.on-sand .club.is-active .body-copy, .on-sand .club.is-active .meta { color: rgba(203, 189, 162, 0.8); }
+.on-sand .club.is-active .body-copy, .on-sand .club.is-active .meta { color: rgba(13, 12, 11, 0.7); }
 .club input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .club:has(input:focus-visible) { outline: 1px solid var(--sand-ink); outline-offset: 4px; }
 .club__name { line-height: 0.9; }
