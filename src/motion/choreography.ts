@@ -168,10 +168,84 @@ function buildVeil() {
   }
 }
 
+/**
+ * The clubs, wide screens only: the stage pins for a little under two screens while the floor
+ * opens from a small frame to the full screen, the glimpses of the building drift out of its
+ * way, the headline lifts and the brief rises over the photo. Below it, the Afterwards band
+ * drifts: outline type one way, the rooms the other. Phones and reduced motion keep the stack.
+ */
+function buildClubs() {
+  const mm = gsap.matchMedia()
+  mm.add('(min-width: 821px) and (prefers-reduced-motion: no-preference)', () => {
+    const section = document.querySelector<HTMLElement>('.clubs')
+    const stageEl = section?.querySelector<HTMLElement>('.clubs__stage')
+    const title = section?.querySelector<HTMLElement>('.clubs__title')
+    if (!section || !stageEl || !title) return
+    // the heading box fills the stage to centre its lines; measure the lines themselves
+    const textHeight = () =>
+      Array.from(title.querySelectorAll<HTMLElement>('.line-mask')).reduce((h, l) => h + l.offsetHeight, 0)
+    section.classList.add('is-staged')
+
+    // outward, away from the frame each glimpse sits beside
+    const drift = [
+      [-0.32, -0.3],
+      [-0.26, 0.32],
+      [0.34, -0.22],
+    ]
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: stageEl, start: 'top top', end: '+=170%', pin: true, scrub: 0.6, invalidateOnRefresh: true },
+    })
+    tl.fromTo('.clubs__plate', { clipPath: 'inset(27% 35% 27% 35%)' }, { clipPath: 'inset(0% 0% 0% 0%)', ease: 'power2.inOut', duration: 1 }, 0)
+      .fromTo('.clubs__plate img', { scale: 1.4 }, { scale: 1, ease: 'power2.inOut', duration: 1 }, 0)
+      .to(
+        '.clubs__glimpse',
+        {
+          x: (i) => drift[i][0] * window.innerWidth,
+          y: (i) => drift[i][1] * window.innerHeight,
+          scale: 1.2,
+          opacity: 0,
+          ease: 'power2.in',
+          duration: 0.75,
+          stagger: 0.06,
+        },
+        0.05,
+      )
+      .to('.clubs__shade', { opacity: 1, ease: 'none', duration: 0.5 }, 0.45)
+      // the headline climbs to sit under the nav once the floor is open
+      .to(
+        title,
+        {
+          y: () => -(stageEl.offsetHeight / 2 - textHeight() / 2 - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) - 8),
+          ease: 'power2.inOut',
+          duration: 0.6,
+        },
+        0.5,
+      )
+      .fromTo('.clubs__lede, .clubs__zone', { opacity: 0, y: 40 }, { opacity: 1, y: 0, ease: 'power2.out', duration: 0.35, stagger: 0.06 }, 0.85)
+
+    gsap.fromTo('.clubs__word', { xPercent: 4 }, {
+      xPercent: -22,
+      ease: 'none',
+      scrollTrigger: { trigger: '.clubs__after', start: 'top bottom', end: 'bottom top', scrub: true },
+    })
+    gsap.utils.toArray<HTMLElement>('.clubs__amenities li').forEach((li, i) => {
+      gsap.fromTo(li, { y: [40, 140, 80][i] }, {
+        y: [-40, -140, -80][i],
+        ease: 'none',
+        scrollTrigger: { trigger: '.clubs__after', start: 'top bottom', end: 'bottom top', scrub: true },
+      })
+    })
+
+    return () => section.classList.remove('is-staged')
+  })
+  return () => mm.revert()
+}
+
 /** Registers every scroll-driven event. Returns a cleanup. */
 export function initChoreography() {
   let killTake = () => {}
   let killVeil = () => {}
+  let killClubs = () => {}
   const ctx = gsap.context(() => {
     // initial states for the intro (set here so no-JS / fallback stays visible)
     gsap.set('.hero .line-mask > span', { yPercent: 108 })
@@ -201,6 +275,8 @@ export function initChoreography() {
       { from: 'program', to: 'finale', trigger: '.membership', start: 'top bottom', end: 'bottom bottom' },
     ])
     killVeil = buildVeil()
+    // before the generic reveals, so its pin spacer is in place when they measure
+    killClubs = buildClubs()
 
     /* 1  Hero type drifts up and away */
     gsap.to('.hero__inner', {
@@ -290,6 +366,7 @@ export function initChoreography() {
   return () => {
     killTake()
     killVeil()
+    killClubs()
     ctx.revert()
   }
 }

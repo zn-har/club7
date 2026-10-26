@@ -10,6 +10,10 @@ export const isCoarsePointer =
 
 export const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 820
 
+/** Cursor-led effects need a real mouse and permission to move. */
+export const pointerFx =
+  typeof window !== 'undefined' && !isCoarsePointer && !prefersReducedMotion && window.matchMedia('(hover: hover)').matches
+
 type Tier = 'high' | 'low' | 'none'
 
 // no driver at all: the browser draws WebGL on the CPU
