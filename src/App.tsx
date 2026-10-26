@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect } from 'react'
+import { Cursor } from './components/Cursor'
 import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
 import { useStageOn } from './lib/env'
@@ -68,6 +69,7 @@ export default function App() {
         <Membership />
         <Finale />
       </main>
+      <Cursor />
     </>
   )
 }

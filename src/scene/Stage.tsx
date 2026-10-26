@@ -13,6 +13,7 @@ import { Machines } from './Machines'
 import { Platform } from './Platform'
 import { Dumbbell, Kettlebell, PlateStack } from './Props'
 import { PLATFORM_H, STATIONS, stage } from './state'
+import { StaticBatch } from './StaticBatch'
 
 const focusPoint = new Vector3()
 
@@ -139,29 +140,32 @@ function Set() {
     <>
       <Platform />
       <Machines />
-      <Barbell position-y={PLATE_R + PLATFORM_H} />
-      <ContactShadows position-y={PLATFORM_H + 0.002} scale={3.2} blur={2.4} far={0.5} opacity={0.75} resolution={512} frames={1} color="#000000" />
-
-      <group position={bells}>
+      {/* the hero kit keeps its shadows but draws merged, one call per material; one batch per
+          station, so the stations out of shot are still culled */}
+      <StaticBatch>
+        <Barbell position-y={PLATE_R + PLATFORM_H} />
+      </StaticBatch>
+      <StaticBatch position={bells}>
         {/* front bell turned so its weight faces the conditioning shot; the others set down any old way */}
         <Kettlebell rotation-y={0.9} />
         <Kettlebell position={[-0.34, 0, 0.12]} rotation-y={0.25} />
         <Kettlebell position={[-0.12, 0, -0.38]} rotation-y={2.5} />
-        <ContactShadows position-y={0.002} scale={1.6} blur={2} far={0.35} opacity={0.8} resolution={256} frames={1} color="#000000" />
-      </group>
-
-      <group position={dumbbells}>
+      </StaticBatch>
+      <StaticBatch position={dumbbells}>
         <Dumbbell position={[0, 0, 0.13]} rotation-y={0.12} />
         <Dumbbell position={[0.03, 0, -0.16]} rotation-y={-0.06} />
-        <ContactShadows position-y={0.002} scale={1.4} blur={2} far={0.25} opacity={0.8} resolution={256} frames={1} color="#000000" />
-      </group>
-
-      <group position={stacks}>
+      </StaticBatch>
+      <StaticBatch position={stacks}>
         <PlateStack count={1} position={[-0.55, 0, 0.08]} />
         <PlateStack count={2} position={[0, 0, -0.04]} />
         <PlateStack count={3} position={[0.55, 0, 0.06]} />
-        <ContactShadows position-y={0.002} scale={2} blur={2} far={0.3} opacity={0.8} resolution={256} frames={1} color="#000000" />
-      </group>
+      </StaticBatch>
+
+      {/* outside the batch: each renders its own depth pass once, from under the floor */}
+      <ContactShadows position-y={PLATFORM_H + 0.002} scale={3.2} blur={2.4} far={0.5} opacity={0.75} resolution={512} frames={1} color="#000000" />
+      <ContactShadows position={[bells.x, 0.002, bells.z]} scale={1.6} blur={2} far={0.35} opacity={0.8} resolution={256} frames={1} color="#000000" />
+      <ContactShadows position={[dumbbells.x, 0.002, dumbbells.z]} scale={1.4} blur={2} far={0.25} opacity={0.8} resolution={256} frames={1} color="#000000" />
+      <ContactShadows position={[stacks.x, 0.002, stacks.z]} scale={2} blur={2} far={0.3} opacity={0.8} resolution={256} frames={1} color="#000000" />
     </>
   )
 }

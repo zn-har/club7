@@ -156,79 +156,211 @@ main { position: relative; z-index: 1; }
    --------------------------------------------------------------- */
 .programs { position: relative; min-height: 100vh; min-height: 100svh; padding-block: clamp(56px, 8vh, 100px); }
 .programs__inner { position: relative; display: grid; gap: clamp(24px, 4vh, 40px); }
-.programs__tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-.programs__tabs button {
-  padding: 12px 18px; border: 1px solid var(--line);
-  font-size: 14px; color: var(--bone-dim);
-  transition: border-color 0.4s var(--ease-out), color 0.4s var(--ease-out);
+/* the index: four names set big over the set. Closed rows are outlines; the open
+   row fills solid from the left, and every row's letters roll on hover. */
+.programs__title { font-size: clamp(30px, 3vw, 52px); line-height: 1; }
+.programs__accent { color: var(--brass); }
+.programs__index { display: grid; justify-items: start; margin-top: clamp(4px, 1vh, 12px); }
+.programs__row {
+  --roll: 0.55s;
+  position: relative; display: flex; align-items: flex-start; gap: clamp(12px, 1.2vw, 20px);
+  padding-block: 2px; text-align: left;
 }
-.programs__tabs button:hover { color: var(--bone); border-color: var(--line-strong); }
-.programs__tabs button.is-active { color: var(--bone); border-color: var(--bone); }
+.programs__num {
+  min-width: 2.4em; padding-top: 0.7em;
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--steel);
+  transition: color 0.4s var(--ease-out);
+}
+.programs__row.is-active .programs__num { color: var(--brass); }
+.programs__word {
+  position: relative; display: block; overflow: hidden;
+  font-family: var(--f-display); font-variation-settings: 'wdth' 64; font-weight: 760;
+  text-transform: uppercase; letter-spacing: -0.012em;
+  font-size: clamp(36px, min(5vw, 8.4vh), 92px); line-height: 0.92;
+  padding-top: 0.04em;
+}
+.programs__ghost, .programs__fill { display: block; white-space: nowrap; }
+.programs__ghost { color: transparent; -webkit-text-stroke: 1px rgba(235, 230, 221, 0.38); transition: -webkit-text-stroke-color 0.4s var(--ease-out); }
+@supports not (-webkit-text-stroke: 1px black) { .programs__ghost { color: rgba(235, 230, 221, 0.3); } }
+.programs__fill {
+  position: absolute; inset: 0.04em 0 0; color: var(--bone);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.9s var(--ease-out);
+}
+.programs__row.is-active .programs__fill { clip-path: inset(0 0 0 0); }
+.programs__row:hover .programs__ghost { -webkit-text-stroke-color: rgba(235, 230, 221, 0.8); }
+/* letter roll: each glyph carries its own copy one line below */
+.programs__word [data-l] {
+  position: relative; display: inline-block;
+  transition: transform var(--roll) var(--ease-out);
+  transition-delay: calc(var(--i) * 18ms);
+}
+.programs__word [data-l]::after { content: attr(data-l); position: absolute; left: 0; top: 100%; }
+.programs__row:hover .programs__word [data-l] { transform: translateY(-100%); }
+.programs__row:focus-visible { outline-offset: 6px; }
+
+/* cursor spotlight: a brass copy of the name, masked to a soft pool that follows the
+   pointer and opens on hover (Programs.tsx sets --mx / --my) */
+@property --spot { syntax: '<length>'; inherits: false; initial-value: 0px; }
+.programs__lit {
+  position: absolute; inset: 0.04em 0 0; display: block; white-space: nowrap;
+  color: var(--brass); pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle var(--spot) at var(--mx, 50%) var(--my, 50%), #000 30%, transparent 100%);
+  mask-image: radial-gradient(circle var(--spot) at var(--mx, 50%) var(--my, 50%), #000 30%, transparent 100%);
+  transition: --spot 0.6s var(--ease-out);
+}
+.programs__row:hover .programs__lit { --spot: 130px; }
+
+/* the peek: that programme's photo trailing the cursor */
+.programs__peek {
+  position: fixed; left: 0; top: 0; z-index: 40; pointer-events: none;
+  width: clamp(170px, 14vw, 230px); aspect-ratio: 4 / 5;
+  clip-path: inset(50% 50% 50% 50%);
+  transition: clip-path 0.7s var(--ease-out);
+  will-change: transform, clip-path;
+}
+.programs__peek.is-on { clip-path: inset(0 0 0 0); }
+.programs__peek .photo { position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s var(--ease-out); }
+.programs__peek .photo.is-shown { opacity: 1; }
+.programs__peek .photo img { transform: scale(1.18); transition: transform 0.9s var(--ease-out); }
+.programs__peek .photo.is-shown img { transform: scale(1); }
+@media (max-width: 820px) { .programs__peek, .programs__lit { display: none; } }
+
 .program {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   column-gap: var(--col-gap);
+  margin-top: clamp(8px, 2vh, 24px);
 }
-.program__text { display: grid; gap: 18px; max-width: 520px; animation: program-in 0.6s var(--ease-out); }
-@keyframes program-in { from { opacity: 0; transform: translateY(12px); } }
-@media (prefers-reduced-motion: reduce) { .program__text { animation: none; } }
-.program__text h3, .program__line { margin: 0; }
-.program__count { color: var(--brass); }
-.program__line { font-size: clamp(24px, 2vw, 32px); line-height: 1.2; color: var(--bone); }
+/* card: eyebrow 6 → heading 14 → body, each layer rising in turn on change */
+.program__text { display: grid; align-content: start; max-width: 440px; }
+.program__text > * { margin: 0; animation: program-in 0.8s var(--ease-out) both; }
+.program__text > :nth-child(2) { animation-delay: 60ms; }
+.program__text > :nth-child(3) { animation-delay: 120ms; }
+.program__text > :nth-child(4) { animation-delay: 180ms; }
+.program__text > :nth-child(5) { animation-delay: 240ms; }
+@keyframes program-in { from { opacity: 0; transform: translateY(14px); } }
+.program__eyebrow { font-size: var(--card-eyebrow); font-weight: 500; letter-spacing: 0.02em; color: var(--brass); }
+/* the club's working voice: the UI sans, set tight and heavy like a coach's cue, not a literary serif */
+.program__line {
+  margin-top: 6px; font-family: var(--f-text); font-size: var(--card-title);
+  font-weight: 600; line-height: 1.08; letter-spacing: -0.025em; color: var(--bone);
+  text-wrap: balance;
+}
+.program__body { margin-top: 14px; font-size: var(--card-body); line-height: 1.55; color: var(--bone-dim); max-width: 44ch; }
 .program__facts {
-  margin: 10px 0 0; display: grid; grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--line-strong);
+  margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
 }
-.program__facts div { padding: 16px 12px 0 0; display: grid; gap: 4px; }
+.program__facts div { padding: 14px 12px 0 0; display: grid; gap: 4px; }
 .program__facts dd { margin: 0; font-size: 15px; }
+.program__cta { justify-self: start; margin-top: 24px; font-size: var(--card-cta); }
+@media (prefers-reduced-motion: reduce) {
+  .program__text > * { animation: none; }
+  .programs__row:hover .programs__word [data-l] { transform: none; }
+}
 .program__inset { align-self: end; justify-self: end; width: clamp(120px, 10vw, 170px); margin: 0 0 14vh; opacity: 0.85; }
 .program__inset .photo { aspect-ratio: 4 / 5; }
 .program__inset figcaption { margin-top: 10px; }
 
 /* ---------------------------------------------------------------
-   Sand: the club's own wall colour. A fixed veil rises over the set
-   (motion/choreography.ts, buildVeil) and these sections sit on it.
+   Middle pages. A fixed veil rises over the set (motion/choreography.ts,
+   buildVeil) and these sections sit on it. It used to be the club's sand
+   wall colour; it now stays in the site's dark ground, so inside .on-sand
+   the sand tokens are remapped onto the dark palette.
    --------------------------------------------------------------- */
-.veil { position: fixed; inset: 0; z-index: 0; background: var(--sand); opacity: 0; visibility: hidden; pointer-events: none; }
-.on-sand { color: var(--sand-ink); }
+.veil { position: fixed; inset: 0; z-index: 0; background: var(--ink); opacity: 0; visibility: hidden; pointer-events: none; }
+.on-sand {
+  --sand: var(--ink);
+  --sand-ink: var(--bone);
+  --sand-dim: var(--bone-dim);
+  --sand-line: var(--line);
+  --sand-line-strong: var(--line-strong);
+  color: var(--sand-ink);
+}
 .on-sand .meta { color: var(--sand-dim); }
 .on-sand .lede, .on-sand .body-copy { color: var(--sand-dim); }
 .on-sand .text-link { color: var(--sand-ink); }
 .on-sand :focus-visible { outline-color: var(--sand-ink); }
 .on-sand ::selection { background: var(--sand-ink); color: var(--sand); }
-/* the real rooms are warm: grade them down, never to grey */
-.on-sand .photo { background: #b6a68a; }
-.on-sand .photo img { filter: saturate(0.72) sepia(0.12) contrast(1.04) brightness(0.98); }
-.on-sand .photo::after { background: linear-gradient(180deg, rgba(26, 23, 20, 0) 70%, rgba(26, 23, 20, 0.18)); mix-blend-mode: multiply; }
 .btn--ink { background: var(--sand-ink); color: var(--sand); border-color: var(--sand-ink); }
 .btn--ink:hover { background: transparent; color: var(--sand-ink); }
 
 /* ---------- The clubs ---------- */
 .clubs { padding-block: 34vh clamp(80px, 12vh, 160px); }
-.clubs__head, .membership__head { row-gap: 32px; margin-bottom: clamp(48px, 8vh, 96px); align-items: end; }
-.clubs__title, .membership__title { grid-column: 1 / span 8; }
-.clubs__lede, .membership__lede { grid-column: 9 / span 4; }
-.on-sand .clubs__lede, .on-sand .membership__lede { color: var(--sand-ink); }
-.clubs__floor { row-gap: 40px; align-items: start; }
-.clubs__plate { grid-column: 1 / span 8; margin: 0; }
+.membership__head { row-gap: 32px; margin-bottom: clamp(48px, 8vh, 96px); align-items: end; }
+.membership__title { grid-column: 1 / span 8; }
+.membership__lede { grid-column: 9 / span 4; }
+.on-sand .membership__lede { color: var(--sand-ink); }
+
+/* Plain stack first (phones, reduced motion, before JS). On wide screens
+   motion/choreography.ts adds .is-staged and pins it as one screen. */
+.clubs__stage { position: relative; display: grid; row-gap: clamp(28px, 5vh, 48px); }
+.clubs__title { padding-inline: var(--gutter); position: relative; z-index: 2; }
+.clubs__plate { position: relative; margin: 0; padding-inline: var(--gutter); }
 .clubs__plate .photo { aspect-ratio: 2 / 1; }
-.clubs__zones { grid-column: 9 / span 4; list-style: none; margin: 0; padding: 0; }
-.clubs__zones li { border-top: 1px solid var(--brass-deep); padding: 16px 0 22px; display: grid; gap: 6px; }
-.clubs__zones li:last-child { border-bottom: 1px solid var(--brass-deep); }
-.clubs__zone { margin: 0; font-size: 19px; font-weight: 560; letter-spacing: -0.005em; }
-.clubs__zones .body-copy { margin: 0; font-size: 15px; }
-.clubs__pair { margin-top: clamp(72px, 12vh, 160px); row-gap: 40px; align-items: start; }
-.clubs__pair figure { margin: 0; }
-.clubs__entrance { grid-column: 1 / span 6; }
-.clubs__entrance .photo { aspect-ratio: 4 / 3; }
-.clubs__reception { grid-column: 8 / span 5; margin-top: 16vh !important; }
-.clubs__reception .photo { aspect-ratio: 5 / 4; }
-.clubs__amenities {
-  list-style: none; margin: clamp(72px, 12vh, 160px) 0 0;
+.clubs__shade { display: none; }
+
+.clubs__brief {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap); row-gap: 32px; align-items: end; position: relative; z-index: 2;
+}
+.clubs__lede { grid-column: 1 / span 3; margin: 0; max-width: 30ch; font-size: var(--card-sub); line-height: 1.4; color: var(--bone); }
+.clubs__zones {
+  grid-column: 5 / -1; list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--col-gap);
+}
+/* compact cards, so the scale steps down: eyebrow 6 → heading 8 → body */
+.clubs__zone { border-top: 1px solid var(--line-strong); padding-top: 16px; display: grid; align-content: start; }
+.clubs__zone > * { margin: 0; }
+.clubs__zone-num { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--brass); }
+.clubs__zone h3 { margin-top: 6px; font-size: var(--card-title-sm); font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+.clubs__zone h3 + p { margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--bone-dim); }
+
+.clubs__glimpses {
+  list-style: none; margin: 0; padding: 0 var(--gutter);
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--col-gap);
 }
-.clubs__amenities .photo { aspect-ratio: 1 / 1; }
-.clubs__amenity { margin: 12px 0 0; font-size: 15px; font-weight: 520; }
+.clubs__glimpse .photo { aspect-ratio: 4 / 3; }
+.clubs__glimpse .meta { margin: 10px 0 0; }
+
+/* the pinned stage: the floor opens from a frame to the whole screen */
+.clubs.is-staged .clubs__stage { display: block; height: 100vh; height: 100svh; overflow: hidden; }
+.is-staged .clubs__plate { position: absolute; inset: 0; padding: 0; will-change: clip-path; }
+.is-staged .clubs__plate .photo { aspect-ratio: auto; height: 100%; }
+.is-staged .clubs__shade {
+  display: block; position: absolute; inset: 0; opacity: 0;
+  background: linear-gradient(180deg, rgba(13, 12, 11, 0.6) 0%, rgba(13, 12, 11, 0.12) 38%, rgba(13, 12, 11, 0.35) 60%, rgba(13, 12, 11, 0.9) 100%);
+}
+.is-staged .clubs__title {
+  position: absolute; inset: 0; display: grid; place-content: center;
+  text-align: center; pointer-events: none;
+}
+.is-staged .clubs__glimpses { position: absolute; inset: 0; display: block; padding: 0; pointer-events: none; }
+.is-staged .clubs__glimpse { position: absolute; z-index: 1; }
+.is-staged .clubs__glimpse:nth-child(1) { left: 4vw; top: 15vh; width: 17vw; }
+.is-staged .clubs__glimpse:nth-child(2) { left: 12vw; bottom: 9vh; width: 12vw; }
+.is-staged .clubs__glimpse:nth-child(3) { right: 5vw; top: 24vh; width: 15vw; }
+.is-staged .clubs__brief { position: absolute; left: 0; right: 0; bottom: clamp(28px, 6vh, 64px); }
+
+/* afterwards: outline type slides one way, the rooms drift the other */
+.clubs__after { position: relative; margin-top: clamp(96px, 16vh, 200px); overflow: hidden; }
+.clubs__word {
+  margin: 0; padding-left: var(--gutter); white-space: nowrap;
+  font-family: var(--f-display); font-variation-settings: 'wdth' 64; font-weight: 760;
+  text-transform: uppercase; letter-spacing: -0.012em;
+  font-size: clamp(96px, 19vw, 360px); line-height: 0.8;
+  color: transparent; -webkit-text-stroke: 1px rgba(235, 230, 221, 0.3);
+}
+@supports not (-webkit-text-stroke: 1px black) { .clubs__word { color: rgba(235, 230, 221, 0.12); } }
+.clubs__amenities {
+  position: relative; list-style: none; margin: calc(clamp(48px, 9vw, 170px) * -1) 0 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--col-gap); align-items: start;
+}
+.clubs__amenities li:nth-child(2) { margin-top: 12vh; }
+.clubs__amenities li:nth-child(3) { margin-top: 5vh; }
+.clubs__amenities .photo { aspect-ratio: 4 / 5; }
+.clubs__amenity { margin: 12px 0 0; font-size: 15px; font-weight: 500; }
 
 /* ---------- Why Club 7 ---------- */
 .coaches { padding-block: clamp(56px, 8vh, 100px) clamp(80px, 12vh, 160px); }
@@ -261,7 +393,7 @@ main { position: relative; z-index: 1; }
 }
 .club:hover { border-color: var(--sand-ink); }
 .club.is-active { background: var(--sand-ink); color: var(--sand); border-color: var(--sand-ink); }
-.on-sand .club.is-active .body-copy, .on-sand .club.is-active .meta { color: rgba(203, 189, 162, 0.8); }
+.on-sand .club.is-active .body-copy, .on-sand .club.is-active .meta { color: rgba(13, 12, 11, 0.7); }
 .club input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .club:has(input:focus-visible) { outline: 1px solid var(--sand-ink); outline-offset: 4px; }
 .club__name { line-height: 0.9; }
@@ -337,9 +469,8 @@ main { position: relative; z-index: 1; }
   .philosophy__statement { font-size: clamp(32px, min(4.8vw, 8.4vh), 86px); }
 
   .programs__inner { gap: clamp(16px, 3vh, 28px); }
-  .program__text { gap: 12px; }
-  .program__text h3 { font-size: clamp(36px, min(5.4vw, 9vh), 96px); }
-  .program__line { font-size: clamp(20px, 1.8vw, 26px); }
+  .program__facts { margin-top: 18px; }
+  .program__cta { margin-top: 18px; }
   .program__facts div { padding-top: 12px; }
 
   .clubs { padding-top: 26vh; }
@@ -367,16 +498,21 @@ main { position: relative; z-index: 1; }
   .principles__list { grid-template-columns: 1fr; gap: 40px; }
 
   .program { grid-template-columns: 1fr; }
-  .programs__tabs { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); scrollbar-width: none; }
-  .programs__tabs button { flex: none; }
   .program__inset { display: none; }
+  .programs__word { font-size: clamp(28px, 9vw, 48px); }
+  .programs__num { min-width: 2em; }
   .program__facts dd { font-size: 14px; }
 
   .clubs { padding-top: 26vh; }
-  .clubs__plate .photo { aspect-ratio: 3 / 2; }
-  .clubs__reception { margin-top: 0 !important; width: 82%; justify-self: end; }
-  .clubs__entrance { width: 92%; }
-  .clubs__amenities { grid-template-columns: 1fr 1fr; row-gap: 28px; }
+  .clubs__plate .photo { aspect-ratio: 4 / 3; }
+  .clubs__lede { grid-column: 1 / -1; }
+  .clubs__zones { grid-column: 1 / -1; grid-template-columns: 1fr; row-gap: 20px; }
+  .clubs__glimpses {
+    display: flex; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); scrollbar-width: none;
+  }
+  .clubs__glimpse { flex: 0 0 72%; scroll-snap-align: start; }
+  .clubs__amenities { grid-template-columns: 1fr 1fr; row-gap: 28px; margin-top: -40px; }
+  .clubs__amenities li:nth-child(n) { margin-top: 0; }
   .clubs__amenities li:last-child { grid-column: 1 / -1; }
   .clubs__amenities li:last-child .photo { aspect-ratio: 16 / 10; }
   .coaches__grid { row-gap: 36px; }
@@ -393,8 +529,7 @@ main { position: relative; z-index: 1; }
   /* thumbs, not cursors: every link and control gets a ~44px hit area */
   .nav__toggle { width: 44px; height: 44px; margin: -10px -10px -10px 0; }
   .nav__mark { padding-block: 10px; margin-block: -5px; }
-  .programs__tabs { scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); }
-  .programs__tabs button { scroll-snap-align: start; }
+  .programs__row { min-height: 44px; }
   .visit__phone { padding-block: 6px; }
   .visit__club .text-link { display: inline-block; padding-top: 12px; }
   .footer__col a { display: inline-block; padding-block: 8px; }

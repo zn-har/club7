@@ -25,6 +25,14 @@
   --f-text: 'Geist Variable', system-ui, sans-serif;
   --f-mono: 'Geist Mono Variable', ui-monospace, monospace;
 
+  /* card type scale: heading ≈ 1.8× subtitle ≈ 2.6× description */
+  --card-eyebrow: 13px;
+  --card-title: clamp(30px, 3vw, 46px);
+  --card-title-sm: clamp(19px, 1.5vw, 22px); /* compact cards: don't force the big heading in */
+  --card-sub: clamp(19px, 1.6vw, 24px);
+  --card-body: clamp(15px, 1.05vw, 17px);
+  --card-cta: 15px;
+
   --gutter: clamp(16px, 4vw, 64px);
   --col-gap: clamp(12px, 1.6vw, 28px);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -88,7 +96,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .display em,
 .serif {
   font-family: var(--f-serif);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   text-transform: none;
   letter-spacing: -0.01em;
@@ -183,6 +191,32 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   transition: background-size 0.5s var(--ease-out);
 }
 .text-link:hover { background-size: 0% 1px; background-position: 100% 100%; }
+
+/* ---------- cursor (components/Cursor.tsx) ---------- */
+/* the system pointer goes only once the custom one is running; text fields keep their caret */
+html.has-cursor, html.has-cursor * { cursor: none !important; }
+html.has-cursor :is(input, textarea, [contenteditable="true"]) { cursor: text !important; }
+html.has-cursor :is(input[type="radio"], input[type="checkbox"]) { cursor: none !important; }
+
+.cursor { position: fixed; inset: 0; z-index: 200; pointer-events: none; transition: opacity 0.3s var(--ease-out); }
+.cursor.is-away, .cursor.is-text { opacity: 0; }
+.cursor__ring, .cursor__dot { position: fixed; left: 0; top: 0; will-change: transform; }
+.cursor__plate {
+  position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid rgba(235, 230, 221, 0.55);
+  transition: transform 0.5s var(--ease-out), background-color 0.5s var(--ease-out),
+    border-color 0.5s var(--ease-out), opacity 0.4s var(--ease-out);
+}
+.cursor__dot::before {
+  content: ''; position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brass); transition: transform 0.35s var(--ease-out), opacity 0.3s var(--ease-out);
+}
+.cursor.is-hover .cursor__plate { transform: scale(1.9); background: rgba(194, 154, 91, 0.16); border-color: var(--brass); }
+.cursor.is-hover .cursor__dot::before { transform: scale(0); }
+.cursor.is-spot .cursor__plate { transform: scale(0.3); opacity: 0; }
+.cursor.is-spot .cursor__dot::before { transform: scale(1.4); }
+.cursor.is-down .cursor__plate { transform: scale(0.75); }
+.cursor.is-hover.is-down .cursor__plate { transform: scale(1.6); }
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
