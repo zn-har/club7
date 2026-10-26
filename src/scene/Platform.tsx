@@ -1,6 +1,7 @@
 import { useTexture } from '@react-three/drei'
 import { useLayoutEffect, useMemo } from 'react'
 import { Color, MeshStandardMaterial, RepeatWrapping, SRGBColorSpace, Vector2, type Texture } from 'three'
+import { LITE } from './quality'
 import { PLATFORM_H, PLATFORM_W, STATIONS } from './state'
 import { getRubberNormal } from './textures'
 import { FLOOR_OVERLAY_SIZE, getFloorOverlay, getPlatformWoodMaps } from './wear'
@@ -22,7 +23,13 @@ function tile(maps: Texture[], repeat: [number, number], srgb = 0) {
   })
 }
 
+/*
+ * The floor fills most of every frame, so its noise is the costliest shading on the set.
+ * Integrated graphics run three octaves instead of five and a single noise for the chalk grit:
+ * the fine octaves are below a pixel at their resolution anyway.
+ */
 const FLOOR_GLSL = /* glsl */ `
+#define FLOOR_OCTAVES ${LITE ? 3 : 5}
 varying vec2 vFloorXZ;
 uniform sampler2D floorOverlay;
 uniform vec3 uEmber;
@@ -32,7 +39,7 @@ float fn(vec2 p) {
   f = f * f * (3.0 - 2.0 * f);
   return mix(mix(fh(i), fh(i + vec2(1, 0)), f.x), mix(fh(i + vec2(0, 1)), fh(i + vec2(1, 1)), f.x), f.y);
 }
-float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * fn(p); p *= 2.03; a *= 0.5; } return s; }
+float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < FLOOR_OCTAVES; i++) { s += a * fn(p); p *= 2.03; a *= 0.5; } return s; }
 `
 
 function makeFloorMaterial(maps: Texture[]) {
@@ -77,7 +84,7 @@ function makeFloorMaterial(maps: Texture[]) {
         vec4 o = texture2D(floorOverlay, clamp(ouv, 0.0, 1.0));
         o *= step(0.0, ouv.x) * step(ouv.x, 1.0) * step(0.0, ouv.y) * step(ouv.y, 1.0);
         // chalk is grain, not haze: break it up hard at a few millimetres
-        float grit = fbm(fxz * 60.0);
+        float grit = ${LITE ? 'fn(fxz * 60.0)' : 'fbm(fxz * 60.0)'};
         float chalk = clamp(o.r * smoothstep(0.35, 0.8, fbm(fxz * 11.0) * 0.6 + grit * 0.55) * 1.6, 0.0, 1.0);
         float paint = o.g * smoothstep(0.42, 0.58, fbm(fxz * 14.0) * 0.6 + fbm(fxz * 2.2) * 0.4 + o.g * 0.12);
         float scuff = o.b * (0.5 + 0.5 * fine);

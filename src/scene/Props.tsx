@@ -1,6 +1,7 @@
 import type { ThreeElements } from '@react-three/fiber'
-import { CatmullRomCurve3, CylinderGeometry, LatheGeometry, MeshPhysicalMaterial, SplineCurve, TubeGeometry, Vector2, Vector3 } from 'three'
+import { CatmullRomCurve3, CylinderGeometry, LatheGeometry, SplineCurve, TubeGeometry, Vector2, Vector3 } from 'three'
 import { PLATE_T, PlateFlat, sharedMaterials } from './Barbell'
+import { physical } from './quality'
 import { getBellBodyMaps, getBellHandleMaps } from './wear'
 
 const v = (r: number, y: number) => new Vector2(r, y)
@@ -58,7 +59,7 @@ function makeKettlebell() {
   const b = getBellBodyMaps()
   const h = getBellHandleMaps()
   // powder-coated steel; roughness (G) and metalness (B) share one map, so chips read as bare steel
-  const coat = new MeshPhysicalMaterial({
+  const coat = physical({
     map: b.map,
     roughnessMap: b.orm,
     metalnessMap: b.orm,
@@ -69,7 +70,7 @@ function makeKettlebell() {
     color: '#c9c1ba',
     envMapIntensity: 0.9,
   })
-  const grip = new MeshPhysicalMaterial({
+  const grip = physical({
     map: h.map,
     roughnessMap: h.orm,
     metalnessMap: h.orm,
@@ -102,36 +103,37 @@ export function Kettlebell(props: ThreeElements['group']) {
 let db: ReturnType<typeof makeDumbbell> | null = null
 function makeDumbbell() {
   const half = 0.07 // half handle length
-  const head = new LatheGeometry(
-    [
-      v(0.0001, half),
-      v(0.03, half),
-      v(0.034, half + 0.003),
-      v(0.07, half + 0.006),
-      v(0.075, half + 0.014),
-      v(0.075, half + 0.066),
-      v(0.07, half + 0.074),
-      v(0.04, half + 0.078),
-      v(0.0001, half + 0.079),
-    ],
-    96,
-  )
-  const urethane = new MeshPhysicalMaterial({ color: '#141413', roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.4 })
-  return { head, urethane, half }
+  const profile = [
+    v(0.0001, half),
+    v(0.03, half),
+    v(0.034, half + 0.003),
+    v(0.07, half + 0.006),
+    v(0.075, half + 0.014),
+    v(0.075, half + 0.066),
+    v(0.07, half + 0.074),
+    v(0.04, half + 0.078),
+    v(0.0001, half + 0.079),
+  ]
+  const head = new LatheGeometry(profile, 96)
+  // the rack's 28 bells sit metres back: a third of the facets
+  const headLo = new LatheGeometry(profile, 32)
+  const urethane = physical({ color: '#141413', roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.4 })
+  return { head, headLo, urethane, half }
 }
 
-export function Dumbbell(props: ThreeElements['group']) {
+export function Dumbbell({ lo = false, ...props }: { lo?: boolean } & ThreeElements['group']) {
   db ??= makeDumbbell()
   const m = sharedMaterials()
+  const head = lo ? db.headLo : db.head
   return (
     // lies on its side: handle axis along local X, resting on the heads
     <group {...props}>
       <group position-y={0.075} rotation-z={Math.PI / 2}>
         <mesh material={m.knurled} castShadow receiveShadow>
-          <cylinderGeometry args={[0.016, 0.016, db.half * 2, 40, 1, true]} />
+          <cylinderGeometry args={[0.016, 0.016, db.half * 2, lo ? 12 : 40, 1, true]} />
         </mesh>
-        <mesh geometry={db.head} material={db.urethane} castShadow receiveShadow />
-        <mesh geometry={db.head} material={db.urethane} rotation-z={Math.PI} castShadow receiveShadow />
+        <mesh geometry={head} material={db.urethane} castShadow receiveShadow />
+        <mesh geometry={head} material={db.urethane} rotation-z={Math.PI} castShadow receiveShadow />
       </group>
     </group>
   )

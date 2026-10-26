@@ -1,11 +1,12 @@
 import { Environment } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { type Ref, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   AdditiveBlending,
   Color,
   ConeGeometry,
   Euler,
+  type DirectionalLight,
   type Mesh,
   Object3D,
   type RectAreaLight,
@@ -38,6 +39,8 @@ const BATTENS: [number, number, number][] = [
   [4.7, -3.0, Math.PI / 2],
 ]
 const BATTEN_Y = 4.3
+/** directional stand-in for the rim strip on the lite tier (3.2 × 0.6 m at 7 nits ≈ this) */
+const RIM_LITE = 1.6
 
 /**
  * Light through a little gym air: an open cone hung from the key fixture, brightest along
@@ -90,7 +93,7 @@ function makeHaze() {
 export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lite?: boolean }) {
   const key = useRef<SpotLight>(null)
   const wall = useRef<SpotLight>(null)
-  const rim = useRef<RectAreaLight>(null)
+  const rim = useRef<RectAreaLight | DirectionalLight>(null)
   const keyTarget = useRef(new Object3D())
   const pools = useRef<SpotLight[]>([])
   const battens = useRef<RectAreaLight[]>([])
@@ -104,7 +107,11 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
     wt.position.set(-1.2, 1.2, -7)
     wall.current!.target = wt
     wall.current!.parent?.add(wt)
-    rim.current!.lookAt(0, 0.2, 0)
+    const r = rim.current!
+    if ('isDirectionalLight' in r) {
+      r.target.position.set(0, 0.2, 0)
+      r.target.updateMatrixWorld()
+    } else r.lookAt(0, 0.2, 0)
   }, [])
 
   useFrame(({ scene }) => {
@@ -115,7 +122,7 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
     k.intensity = c.key * 110 * (1 + (c.cone - 0.5) * 2.5)
     k.angle = c.cone
     k.color.copy(NEUTRAL).lerp(TUNGSTEN, c.warm)
-    rim.current!.intensity = c.rim * 7
+    rim.current!.intensity = c.rim * (lite ? RIM_LITE : 7)
     wall.current!.intensity = c.wall * 55
     // without the battens' own light the room's HDRI carries the top fill
     scene.environmentIntensity = c.fill * (lite ? 0.5 : 0.32)
@@ -150,7 +157,13 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
         shadow-normalBias={0.015}
       />
       <mesh ref={haze} geometry={hazeParts.geo} material={hazeParts.mat} renderOrder={10} frustumCulled={false} />
-      <rectAreaLight ref={rim} position={[-1.6, 1.3, -2.2]} width={3.2} height={0.6} color="#dfe8f2" />
+      {/* area lights are priced per pixel on every lit surface: integrated graphics get the rim
+          from a plain directional in the same place, which reads the same along the bar's edges */}
+      {lite ? (
+        <directionalLight ref={rim as Ref<DirectionalLight>} position={[-1.6, 1.3, -2.2]} color="#dfe8f2" />
+      ) : (
+        <rectAreaLight ref={rim as Ref<RectAreaLight>} position={[-1.6, 1.3, -2.2]} width={3.2} height={0.6} color="#dfe8f2" />
+      )}
       {/* fluorescent battens: the fitting itself (bright enough to bloom) and the light it throws.
           Area lights are priced per pixel on every lit surface; integrated graphics keep only the fittings */}
       {BATTENS.map(([x, z, ry], i) => (
@@ -170,8 +183,9 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
           </mesh>
         </group>
       ))}
-      {/* practicals over the other stations: no shadows, just enough to find them in the dark */}
-      {[STATIONS.bells, STATIONS.dumbbells, STATIONS.stacks].map((p, i) => (
+      {/* practicals over the other stations: no shadows, just enough to find them in the dark.
+          Integrated graphics skip them: the key already follows whichever station is in shot */}
+      {!lite && [STATIONS.bells, STATIONS.dumbbells, STATIONS.stacks].map((p, i) => (
         <spotLight
           key={i}
           ref={(l) => {

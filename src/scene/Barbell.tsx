@@ -1,5 +1,6 @@
 import type { ThreeElements } from '@react-three/fiber'
-import { DoubleSide, LatheGeometry, MeshPhysicalMaterial, MeshStandardMaterial, RingGeometry, Vector2 } from 'three'
+import { DoubleSide, LatheGeometry, MeshStandardMaterial, RingGeometry, Vector2 } from 'three'
+import { physical } from './quality'
 import { getKnurlNormal, getPlateDecal, getRubberNormal } from './textures'
 
 /**
@@ -21,8 +22,9 @@ const v = (r: number, y: number) => new Vector2(r, y)
 
 let materials: ReturnType<typeof createMaterials> | null = null
 const useMaterials = () => (materials ??= createMaterials())
-let geometries: ReturnType<typeof createGeometries> | null = null
-const useGeometries = () => (geometries ??= createGeometries())
+// background kit (racks, horns) turns at a third of the facets: at that distance nobody counts them
+const geometries: Partial<Record<'full' | 'lo', ReturnType<typeof createGeometries>>> = {}
+const useGeometries = (lo = false) => (geometries[lo ? 'lo' : 'full'] ??= createGeometries(lo ? 1 / 3 : 1))
 
 function createMaterials() {
   {
@@ -31,16 +33,16 @@ function createMaterials() {
     knurlTex.repeat.set(5, 18)
     knurlTex.needsUpdate = true
 
-    const knurled = new MeshPhysicalMaterial({
+    const knurled = physical({
       color: '#9a9894',
       metalness: 1,
       roughness: 0.42,
       normalMap: knurlTex,
       normalScale: new Vector2(0.9, 0.9),
     })
-    const smoothShaft = new MeshPhysicalMaterial({ color: '#a19f9b', metalness: 1, roughness: 0.3 })
+    const smoothShaft = physical({ color: '#a19f9b', metalness: 1, roughness: 0.3 })
     // hard chrome sleeves, lightly brushed by years of plates sliding on
-    const chrome = new MeshPhysicalMaterial({
+    const chrome = physical({
       color: '#e2e0dc',
       metalness: 1,
       roughness: 0.1,
@@ -51,7 +53,7 @@ function createMaterials() {
     const rubberNormal = getRubberNormal().clone()
     rubberNormal.repeat.set(7, 7)
     rubberNormal.needsUpdate = true
-    const rubber = new MeshPhysicalMaterial({
+    const rubber = physical({
       // virgin rubber: dull broad specular, a dusty sheen that lifts the edges at grazing angles
       color: '#121212',
       metalness: 0,
@@ -64,7 +66,7 @@ function createMaterials() {
       sheenColor: '#3b3b3d',
       side: DoubleSide,
     })
-    const hub = new MeshPhysicalMaterial({ color: '#8f8e8b', metalness: 1, roughness: 0.46, side: DoubleSide })
+    const hub = physical({ color: '#8f8e8b', metalness: 1, roughness: 0.46, side: DoubleSide })
     const decal = new MeshStandardMaterial({
       map: getPlateDecal('20'),
       transparent: true,
@@ -79,7 +81,8 @@ function createMaterials() {
   }
 }
 
-function createGeometries() {
+function createGeometries(detail: number) {
+  const seg = (n: number) => Math.max(16, Math.round(n * detail))
   {
     // collar + sleeve, profile from inner collar face outwards (y = along bar)
     const sleeve = new LatheGeometry(
@@ -100,7 +103,7 @@ function createGeometries() {
         v(SLEEVE_R - 0.003, BAR_HALF),
         v(0.0001, BAR_HALF),
       ],
-      96,
+      seg(96),
     )
 
     const h = 0.027 // half thickness of a 20 kg bumper
@@ -124,7 +127,7 @@ function createGeometries() {
         v(0.081, h - 0.0035),
         v(0.081, -h + 0.0035),
       ],
-      128,
+      seg(128),
     )
     const hub = new LatheGeometry(
       [
@@ -138,9 +141,9 @@ function createGeometries() {
         v(0.0255, h + 0.0005),
         v(0.0255, -h - 0.0005),
       ],
-      96,
+      seg(96),
     )
-    const decal = new RingGeometry(0.084, PLATE_R - 0.03, 128, 1)
+    const decal = new RingGeometry(0.084, PLATE_R - 0.03, seg(128), 1)
     // RingGeometry UVs map the outer diameter to 0..1; rescale so the canvas spans the full plate
     const uv = decal.attributes.uv
     const pos = decal.attributes.position
@@ -157,15 +160,15 @@ function createGeometries() {
         v(0.041, 0.02),
         v(SLEEVE_R + 0.0005, 0.02),
       ],
-      64,
+      seg(64),
     )
     return { sleeve, rubber, hub, decal, lock, h }
   }
 }
 
-function Plate({ x, flip, rotation }: { x: number; flip: number; rotation: number }) {
+function Plate({ x, flip, rotation, lo }: { x: number; flip: number; rotation: number; lo: boolean }) {
   const m = useMaterials()
-  const g = useGeometries()
+  const g = useGeometries(lo)
   const face = g.h - 0.0035 + 0.0004
   return (
     // lathe axis is Y; plates rotate about the bar (X) so each sits at its own angle
@@ -179,9 +182,9 @@ function Plate({ x, flip, rotation }: { x: number; flip: number; rotation: numbe
   )
 }
 
-export function Barbell(props: ThreeElements['group']) {
+export function Barbell({ lo = false, ...props }: { lo?: boolean } & ThreeElements['group']) {
   const m = useMaterials()
-  const g = useGeometries()
+  const g = useGeometries(lo)
   const t = g.h * 2
   // knurl pattern: centre knurl, smooth, grip knurl, smooth to collar
   const shaftSegments: Array<[number, number, boolean]> = [
@@ -204,14 +207,14 @@ export function Barbell(props: ThreeElements['group']) {
           castShadow
           receiveShadow
         >
-          <cylinderGeometry args={[SHAFT_R, SHAFT_R, b - a, 48, 1, true]} />
+          <cylinderGeometry args={[SHAFT_R, SHAFT_R, b - a, lo ? 16 : 48, 1, true]} />
         </mesh>
       ))}
       {[1, -1].map((side) => (
         <group key={side}>
           <mesh geometry={g.sleeve} material={m.chrome} rotation-z={(-Math.PI / 2) * side} castShadow receiveShadow />
-          <Plate x={side * (COLLAR_IN + COLLAR_W + 0.002 + t / 2)} flip={side} rotation={side * 0.7} />
-          <Plate x={side * (COLLAR_IN + COLLAR_W + 0.004 + t * 1.5)} flip={side} rotation={side * 2.1 + 0.4} />
+          <Plate x={side * (COLLAR_IN + COLLAR_W + 0.002 + t / 2)} flip={side} rotation={side * 0.7} lo={lo} />
+          <Plate x={side * (COLLAR_IN + COLLAR_W + 0.004 + t * 1.5)} flip={side} rotation={side * 2.1 + 0.4} lo={lo} />
           <mesh
             geometry={g.lock}
             material={m.chrome}
@@ -229,9 +232,9 @@ export function Barbell(props: ThreeElements['group']) {
 export const PLATE_T = 0.054
 
 /** A single bumper lying flat (axis = Y), printed face up — for stacks on the floor. */
-export function PlateFlat(props: ThreeElements['group']) {
+export function PlateFlat({ lo = false, ...props }: { lo?: boolean } & ThreeElements['group']) {
   const m = useMaterials()
-  const g = useGeometries()
+  const g = useGeometries(lo)
   return (
     <group {...props}>
       <mesh geometry={g.rubber} material={m.rubber} castShadow receiveShadow />

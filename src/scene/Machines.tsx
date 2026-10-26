@@ -1,8 +1,10 @@
 import { RoundedBox } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
-import { Color, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
+import { Color, MeshStandardMaterial } from 'three'
 import { Barbell, PLATE_T, PlateFlat } from './Barbell'
 import { Dumbbell } from './Props'
+import { physical } from './quality'
+import { StaticBatch } from './StaticBatch'
 
 /**
  * The rest of the floor: racks along the back wall, benches and a dumbbell rack down the
@@ -15,9 +17,9 @@ const useMats = () => (mats ??= makeMaterials())
 function makeMaterials() {
   return {
     // matte black powder coat over 3×3" 11-gauge steel
-    steel: new MeshPhysicalMaterial({ color: '#1c1c1e', metalness: 0.6, roughness: 0.45, clearcoat: 0.25, clearcoatRoughness: 0.6 }),
+    steel: physical({ color: '#1c1c1e', metalness: 0.6, roughness: 0.45, clearcoat: 0.25, clearcoatRoughness: 0.6 }),
     zinc: new MeshStandardMaterial({ color: '#9b9a97', metalness: 1, roughness: 0.32 }),
-    vinyl: new MeshPhysicalMaterial({ color: '#111112', roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.45, sheen: 0.3, sheenColor: new Color('#2a2a2c') }),
+    vinyl: physical({ color: '#111112', roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.45, sheen: 0.3, sheenColor: new Color('#2a2a2c') }),
     shroud: new MeshStandardMaterial({ color: '#161617', roughness: 0.62, metalness: 0.1 }),
     belt: new MeshStandardMaterial({ color: '#0c0c0c', roughness: 0.92 }),
     hole: new MeshStandardMaterial({ color: '#050505', roughness: 1 }),
@@ -82,11 +84,11 @@ export function PowerRack({ loaded = true, ...props }: { loaded?: boolean } & Th
             <cylinderGeometry args={[0.024, 0.024, 0.26, 24]} />
           </mesh>
           {[0, 1].map((i) => (
-            <PlateFlat key={i} position-x={sx * (0.03 + PLATE_T * (i + 0.5))} rotation={[i * 1.3, 0, Math.PI / 2]} />
+            <PlateFlat key={i} position-x={sx * (0.03 + PLATE_T * (i + 0.5))} rotation={[i * 1.3, 0, Math.PI / 2]} lo />
           ))}
         </group>
       ))}
-      {loaded && <Barbell position={[0, 1.39, uz + T / 2 + 0.05]} rotation-x={0.4} />}
+      {loaded && <Barbell lo position={[0, 1.39, uz + T / 2 + 0.05]} rotation-x={0.4} />}
     </group>
   )
 }
@@ -155,6 +157,7 @@ export function DumbbellRack(props: ThreeElements['group']) {
                 position={[x + w / 2, t.y + 0.018, t.z]}
                 rotation={[t.tilt, Math.PI / 2, 0]}
                 scale={s}
+                lo
               />,
             )
             x += w + 0.008
@@ -264,21 +267,31 @@ export function Treadmill(props: ThreeElements['group']) {
   )
 }
 
-/** Where everything stands. The bar's platform is the origin; the back wall is at z = -7. */
+/**
+ * Where everything stands. The bar's platform is the origin; the back wall is at z = -7.
+ * All of it sits outside the key light's cone, so none of it takes part in the shadow pass,
+ * and it never moves, so it draws merged: a handful of calls instead of a few hundred. One
+ * batch per corner of the room, so the corners out of shot are still culled.
+ */
 export function Machines() {
   return (
     <group>
+      <StaticBatch shadows={false}>
       {/* rack wall: three racks behind the platform, one with a bench set in it */}
       <PowerRack position={[-3.3, 0, -4.4]} />
       <PowerRack position={[-1.15, 0, -4.4]} />
       <PowerRack position={[1.0, 0, -4.4]} loaded={false} />
       <Bench position={[-1.15, 0, -4.15]} />
+      </StaticBatch>
 
+      <StaticBatch shadows={false}>
       {/* free weights down the left */}
       <DumbbellRack position={[-5.7, 0, -1.6]} rotation-y={Math.PI / 2} />
       <Bench position={[-4.35, 0, -2.2]} incline={0.5} rotation-y={-Math.PI / 2 + 0.15} />
       <Bench position={[-4.4, 0, -0.6]} rotation-y={Math.PI / 2 - 0.1} />
+      </StaticBatch>
 
+      <StaticBatch shadows={false}>
       {/* cardio corner, back right: treadmills facing the wall, rowers and bikes in front */}
       {[3.7, 4.75, 5.8].map((x) => (
         <Treadmill key={x} position={[x, 0, -4.6]} rotation-y={Math.PI / 2} />
@@ -288,6 +301,7 @@ export function Machines() {
       ))}
       <AirBike position={[5.3, 0, 0.5]} rotation-y={-0.2} />
       <AirBike position={[5.4, 0, 1.45]} rotation-y={-0.35} />
+      </StaticBatch>
     </group>
   )
 }
