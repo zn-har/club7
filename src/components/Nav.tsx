@@ -82,7 +82,7 @@ export function Nav() {
           ))}
         </ul>
         <a href="#membership" className="nav__cta" onClick={go('#membership')} tabIndex={open ? undefined : -1}>
-          Book a session
+          Book your first session
         </a>
       </div>
     </>
