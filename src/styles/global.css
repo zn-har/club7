@@ -14,11 +14,16 @@
   --brass: #c29a5b;
   --brass-deep: #8a6a38;
   --amber: #f7a600;
+  /* text on amber; fixed, because .on-sand remaps --sand-ink to bone */
+  --amber-ink: #1a1714;
   --sand: #cbbda2;
   --sand-ink: #1a1714;
   --sand-dim: rgba(26, 23, 20, 0.72);
   --sand-line: rgba(26, 23, 20, 0.16);
   --sand-line-strong: rgba(26, 23, 20, 0.34);
+  /* a form field's only edge: kept at >= 3:1 against the ground (WCAG 1.4.11) */
+  --sand-field-line: rgba(26, 23, 20, 0.6);
+  --sand-error: #7a2410;
 
   --f-display: 'Archivo Variable', 'Arial Narrow', sans-serif;
   --f-serif: 'Instrument Serif', 'Times New Roman', serif;
@@ -31,7 +36,6 @@
   --card-title-sm: clamp(19px, 1.5vw, 22px); /* compact cards: don't force the big heading in */
   --card-sub: clamp(19px, 1.6vw, 24px);
   --card-body: clamp(15px, 1.05vw, 17px);
-  --card-cta: 15px;
 
   --gutter: clamp(16px, 4vw, 64px);
   --col-gap: clamp(12px, 1.6vw, 28px);
@@ -182,7 +186,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .btn--solid { background: var(--bone); color: var(--ink); border-color: var(--bone); }
 .btn--solid:hover { background: transparent; color: var(--bone); }
 .btn--ghost:hover { border-color: var(--bone); }
-.btn--amber { background: var(--amber); color: var(--sand-ink); border-color: var(--amber); }
+.btn--amber { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
 .btn--amber:hover { background: transparent; color: var(--amber); }
 .text-link {
   font-size: 15px; font-weight: 500;

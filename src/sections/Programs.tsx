@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { Button } from '../components/Button'
 import { Lines } from '../components/Lines'
 import { Photo } from '../components/Photo'
 import { pointerFx as POINTER_FX, SHOW_CARDS } from '../lib/env'
@@ -232,9 +233,11 @@ export function Programs() {
                 </div>
               ))}
             </dl>
-            <a className="text-link program__cta" href="#membership">
-              Book a first session
-            </a>
+            <div className="program__cta">
+              <Button href="#membership" variant="amber">
+                Book your first session
+              </Button>
+            </div>
           </div>
           {SHOW_CARDS && <figure className="program__inset">
             <Photo name={p.photo.name} alt={p.photo.alt} focal={p.photo.focal} warm={'warm' in p.photo} />

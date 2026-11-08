@@ -140,8 +140,8 @@ export function Membership() {
               </p>
             )}
             <div className="booking__submit">
-              <button type="submit" className="btn btn--ink">
-                Request my session
+              <button type="submit" className="btn btn--amber">
+                Book your first session
               </button>
               <p className="meta">Sends to {EMAIL}. Prefer to talk? Call the club below.</p>
             </div>
