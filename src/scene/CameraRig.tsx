@@ -8,6 +8,10 @@ const target = new Vector3()
 const smoothTarget = new Vector3()
 const WORLD_UP = new Vector3(0, 1, 0)
 const viewDir = new Vector3()
+/** metres of lens travel left to ease out: a tenth of a millimetre */
+const SETTLED_M = 1e-4
+/** pointer drift left to ease out; scaled by ≤ 0.08 m of parallax, so also sub-millimetre */
+const SETTLED_POINTER = 1e-3
 
 /**
  * Slider + jib camera. GSAP writes the shot into `stage.cam`; this rig follows it with
@@ -17,6 +21,7 @@ const viewDir = new Vector3()
 export function CameraRig({ parallax }: { parallax: boolean }) {
   const camera = useThree((s) => s.camera)
   const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
   const state = useRef({ x: 0, y: 0, init: false })
 
   useFrame((_, rawDt) => {
@@ -58,6 +63,17 @@ export function CameraRig({ parallax }: { parallax: boolean }) {
       fog.near = c.fogNear
       fog.far = c.fogFar
     }
+
+    // the frame loop only draws on demand: keep asking until the smoothing has landed, to well
+    // under a pixel (a pixel at subject distance is about a millimetre on this lens)
+    const px = parallax ? stage.pointer.x : 0
+    const py = parallax ? stage.pointer.y : 0
+    stage.settling =
+      camera.position.distanceToSquared(pos) > SETTLED_M * SETTLED_M ||
+      smoothTarget.distanceToSquared(target) > SETTLED_M * SETTLED_M ||
+      Math.abs(s.x - px) > SETTLED_POINTER ||
+      Math.abs(s.y - py) > SETTLED_POINTER
+    if (stage.settling) invalidate()
   })
   return null
 }

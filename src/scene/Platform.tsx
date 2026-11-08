@@ -73,7 +73,7 @@ function makeFloorMaterial(maps: Texture[]) {
         float th = fh(tid + 0.37), th2 = fh(tid * 1.7 + 3.1);
         vec3 c = diffuseColor.rgb * (0.93 + 0.13 * th);
         c *= mix(vec3(1.0), vec3(1.025, 1.0, 0.965), th2); // tiles from different batches
-        float grime = fbm(fxz * 0.45), fine = fbm(fxz * 3.1);
+        float grime = fbm(fxz * 0.45);
         c *= 0.7 + 0.55 * grime;
         // EPDM flecks, faded out before they can alias
         vec2 fp = fxz * 320.0;
@@ -83,11 +83,18 @@ function makeFloorMaterial(maps: Texture[]) {
         vec2 ouv = fxz / ${FLOOR_OVERLAY_SIZE.toFixed(1)} + 0.5;
         vec4 o = texture2D(floorOverlay, clamp(ouv, 0.0, 1.0));
         o *= step(0.0, ouv.x) * step(ouv.x, 1.0) * step(0.0, ouv.y) * step(ouv.y, 1.0);
-        // chalk is grain, not haze: break it up hard at a few millimetres
-        float grit = ${LITE ? 'fn(fxz * 60.0)' : 'fbm(fxz * 60.0)'};
-        float chalk = clamp(o.r * smoothstep(0.35, 0.8, fbm(fxz * 11.0) * 0.6 + grit * 0.55) * 1.6, 0.0, 1.0);
-        float paint = o.g * smoothstep(0.42, 0.58, fbm(fxz * 14.0) * 0.6 + fbm(fxz * 2.2) * 0.4 + o.g * 0.12);
-        float scuff = o.b * (0.5 + 0.5 * fine);
+        // Each mark is its mask times its breakup, so where the mask is empty — most of the
+        // floor — the mark is exactly zero and its noise would be thrown away: skip it. The
+        // overlay is smooth, so neighbouring pixels branch together and the skip is real
+        float chalk = 0.0, paint = 0.0, scuff = 0.0, fine = 0.0;
+        if (o.r > 0.0) {
+          // chalk is grain, not haze: break it up hard at a few millimetres
+          float grit = ${LITE ? 'fn(fxz * 60.0)' : 'fbm(fxz * 60.0)'};
+          chalk = clamp(o.r * smoothstep(0.35, 0.8, fbm(fxz * 11.0) * 0.6 + grit * 0.55) * 1.6, 0.0, 1.0);
+        }
+        if (o.g > 0.0 || o.b > 0.0) fine = fbm(fxz * 3.1);
+        if (o.g > 0.0) paint = o.g * smoothstep(0.42, 0.58, fbm(fxz * 14.0) * 0.6 + fbm(fxz * 2.2) * 0.4 + o.g * 0.12);
+        scuff = o.b * (0.5 + 0.5 * fine);
         c = mix(c, uEmber * (0.85 + 0.3 * fine), paint);
         c *= 1.0 - scuff * 0.5;
         c = mix(c, vec3(0.42, 0.41, 0.39), chalk * 0.45);

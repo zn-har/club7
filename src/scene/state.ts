@@ -104,6 +104,8 @@ export const stage = {
   pointer: { x: 0, y: 0 },
   /** set by the canvas once assets are ready */
   ready: false,
+  /** the lens is still easing towards the rig: frames are needed even though nothing moved */
+  settling: false,
 }
 
 export type Stage = typeof stage

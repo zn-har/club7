@@ -1,5 +1,5 @@
-import { Environment } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { Environment, Lightformer } from '@react-three/drei'
+import { useFrame, useThree } from '@react-three/fiber'
 import { type Ref, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   AdditiveBlending,
@@ -39,6 +39,13 @@ const BATTENS: [number, number, number][] = [
   [4.7, -3.0, Math.PI / 2],
 ]
 const BATTEN_Y = 4.3
+/** a batten tube's luminance at full fill (it was a 1.5 × 0.14 m area light at this intensity) */
+const BATTEN_L = 14
+/** environment intensity at full fill on dedicated graphics */
+const ENV_FILL = 0.32
+/** the environment is captured from bar height, where the hero kit sits */
+const ENV_EYE = 0.3
+const HDRI = '/hdri/gym_01_1k.hdr'
 /** directional stand-in for the rim strip on the lite tier (3.2 × 0.6 m at 7 nits ≈ this) */
 const RIM_LITE = 1.6
 
@@ -96,7 +103,6 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
   const rim = useRef<RectAreaLight | DirectionalLight>(null)
   const keyTarget = useRef(new Object3D())
   const pools = useRef<SpotLight[]>([])
-  const battens = useRef<RectAreaLight[]>([])
   const haze = useRef<Mesh>(null)
   const hazeParts = useMemo(makeHaze, [])
 
@@ -114,8 +120,24 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
     } else r.lookAt(0, 0.2, 0)
   }, [])
 
-  useFrame(({ scene }) => {
+  // Everything on the set stands still, so the key's shadow map only changes when the key itself
+  // moves or opens up: redraw it then, not every frame
+  const getThree = useThree((s) => s.get)
+  const shadowAt = useRef(new Float64Array(7).fill(NaN))
+  useLayoutEffect(() => {
+    const { shadowMap } = getThree().gl
+    shadowMap.autoUpdate = false
+    shadowMap.needsUpdate = true
+    return () => void (shadowMap.autoUpdate = true)
+  }, [getThree])
+
+  useFrame(({ scene, gl }) => {
     const c = stage.cam
+    const at = shadowAt.current
+    if (at[0] !== c.lx || at[1] !== c.ly || at[2] !== c.lz || at[3] !== c.ltx || at[4] !== c.lty || at[5] !== c.ltz || at[6] !== c.cone) {
+      at[0] = c.lx; at[1] = c.ly; at[2] = c.lz; at[3] = c.ltx; at[4] = c.lty; at[5] = c.ltz; at[6] = c.cone
+      gl.shadowMap.needsUpdate = true
+    }
     const k = key.current!
     k.position.set(c.lx, c.ly, c.lz)
     keyTarget.current.position.set(c.ltx, c.lty, c.ltz)
@@ -124,10 +146,10 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
     k.color.copy(NEUTRAL).lerp(TUNGSTEN, c.warm)
     rim.current!.intensity = c.rim * (lite ? RIM_LITE : 7)
     wall.current!.intensity = c.wall * 55
-    // without the battens' own light the room's HDRI carries the top fill
-    scene.environmentIntensity = c.fill * (lite ? 0.5 : 0.32)
+    // the battens are part of the environment, so they track the fill with it. Without them
+    // (lite) the room's HDRI alone carries the top fill
+    scene.environmentIntensity = c.fill * (lite ? 0.5 : ENV_FILL)
     for (const p of pools.current) p.intensity = c.pools * 80
-    for (const b of battens.current) b.intensity = c.fill * 14
 
     // haze follows the key: apex at the fixture, axis down to its target
     const h = haze.current!
@@ -145,7 +167,25 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
 
   return (
     <>
-      <Environment files="/hdri/gym_01_1k.hdr" environmentRotation={ENV_ROTATION} />
+      {lite ? (
+        <Environment files={HDRI} environmentRotation={ENV_ROTATION} />
+      ) : (
+        /* The battens' light, baked: each tube drawn once into the environment map at startup,
+           so the chrome still carries their streaks and the top fill still comes from overhead,
+           but no surface pays for them per pixel per frame. As six area lights they were the
+           costliest thing on the set, about half the frame on dedicated graphics */
+        <Environment files={HDRI} environmentRotation={ENV_ROTATION}>
+          {/* the map is looked up through the inverse of ENV_ROTATION (WebGLMaterials), so lay the
+              tubes out pre-rotated, around the capture point at bar height */}
+          <group rotation-y={-ENV_ROTATION.y} position-y={-ENV_EYE}>
+            {BATTENS.map(([x, z, ry], i) => (
+              <group key={i} position={[x, BATTEN_Y, z]} rotation-y={ry}>
+                <Lightformer form="rect" rotation-x={Math.PI / 2} scale={[1.5, 0.14, 1]} color={FLUORESCENT} intensity={BATTEN_L / ENV_FILL} />
+              </group>
+            ))}
+          </group>
+        </Environment>
+      )}
       <spotLight
         ref={key}
         angle={0.5}
@@ -164,24 +204,12 @@ export function Lighting({ shadowSize, lite = false }: { shadowSize: number; lit
       ) : (
         <rectAreaLight ref={rim as Ref<RectAreaLight>} position={[-1.6, 1.3, -2.2]} width={3.2} height={0.6} color="#dfe8f2" />
       )}
-      {/* fluorescent battens: the fitting itself (bright enough to bloom) and the light it throws.
-          Area lights are priced per pixel on every lit surface; integrated graphics keep only the fittings */}
+      {/* fluorescent battens: the fitting itself, bright enough to bloom */}
       {BATTENS.map(([x, z, ry], i) => (
-        <group key={i} position={[x, BATTEN_Y, z]} rotation-y={ry}>
-          {!lite && <rectAreaLight
-            ref={(l) => {
-              if (l) battens.current[i] = l
-            }}
-            rotation-x={-Math.PI / 2} // lights emit down -z: tip it to face the floor
-            width={1.5}
-            height={0.14}
-            color={FLUORESCENT}
-          />}
-          <mesh position-y={0.02}>
-            <boxGeometry args={[1.52, 0.035, 0.16]} />
-            <meshBasicMaterial color={TUBE} toneMapped={false} />
-          </mesh>
-        </group>
+        <mesh key={i} position={[x, BATTEN_Y + 0.02, z]} rotation-y={ry}>
+          <boxGeometry args={[1.52, 0.035, 0.16]} />
+          <meshBasicMaterial color={TUBE} toneMapped={false} />
+        </mesh>
       ))}
       {/* practicals over the other stations: no shadows, just enough to find them in the dark.
           Integrated graphics skip them: the key already follows whichever station is in shot */}

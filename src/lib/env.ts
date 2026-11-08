@@ -45,7 +45,9 @@ function detectGPU(): Tier {
 }
 
 const TIERS: Tier[] = ['high', 'low', 'none']
-const TIER_KEY = 'c7-stage-tier'
+// versioned: a step-down remembered against an older, heavier build of the set says nothing
+// about this one, so bump it whenever the set's cost changes substantially
+const TIER_KEY = 'c7-stage-tier-v2'
 
 /** A tier this browser has already stepped down to on an earlier visit (see stageStruggling). */
 function rememberedTier(): Tier | null {

@@ -1,7 +1,17 @@
 import { ContactShadows, SoftShadows } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, DepthOfField, EffectComposer, N8AO, Noise, ToneMapping, Vignette } from '@react-three/postprocessing'
-import { BlendFunction, Effect, EffectPass, ToneMappingMode, type DepthOfFieldEffect } from 'postprocessing'
+import {
+  BlendFunction,
+  Effect,
+  EffectPass,
+  NoiseEffect,
+  SMAAEffect,
+  SMAAPreset,
+  ToneMappingMode,
+  VignetteEffect,
+  type DepthOfFieldEffect,
+} from 'postprocessing'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { NoToneMapping, Vector3, WebGLRenderTarget } from 'three'
 import { initialTier, isCoarsePointer, prefersReducedMotion, stageStruggling } from '../lib/env'
@@ -81,26 +91,85 @@ function SanitizePass() {
   return <primitive object={pass} />
 }
 
-/**
- * While the sand pages fully cover the set nothing of it is visible, so stop drawing: the GPU
- * idles through the middle of the page and the take resumes the moment the veil lifts.
- */
-function VeilPause() {
-  const setFrameloop = useThree((s) => s.setFrameloop)
+/** Dev-only: the renderer, for profiling from the console (gl.info, timer queries). */
+function DevHooks() {
+  const three = useThree()
   useEffect(() => {
-    let paused = false
-    const tick = () => {
-      const next = stage.veil > 0.995
-      if (next === paused) return
-      paused = next
-      // demand, not never: a resize or first layout still draws a correctly sized frame
-      setFrameloop(paused ? 'demand' : 'always')
+    ;(window as unknown as Record<string, unknown>).__three = three
+  }, [three])
+  return null
+}
+
+/** Every rig channel the frame depends on: when none of them moves, the frame can't change. */
+const RIG_KEYS = Object.keys(stage.cam) as (keyof typeof stage.cam)[]
+
+/**
+ * Draw a frame only when it would differ from the last one. The set is static; the picture
+ * changes only when scroll moves the rig, the pointer drifts the lens, or the rig is still
+ * easing into place (CameraRig asks for those frames itself). Parked on a shot, the GPU does
+ * nothing and the browser keeps showing the last frame, so reading, hovering and scrolling
+ * the type over the set cost no 3D work at all.
+ *
+ * While the sand pages fully cover the set nothing of it is visible, so nothing is drawn.
+ *
+ * Also watches the frame rate while drawing: if the set can't hold a scrollable rate (a weak
+ * GPU the startup check missed), hand the page to the photographs rather than stutter through
+ * it. Timed off the page's own animation frames, which slow down with a GPU-bound canvas.
+ */
+function RenderDriver() {
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => {
+    const last = new Float64Array(RIG_KEYS.length + 2).fill(NaN)
+    let veiled = false
+    let drawing = false
+    const watch = { warm: 0, time: 0, frames: 0, bad: 0 }
+
+    const tick = (_time: number, deltaMs: number) => {
+      const wasDrawing = drawing
+      drawing = false
+      const nowVeiled = stage.veil > 0.995
+      const lifted = veiled && !nowVeiled
+      veiled = nowVeiled
+      if (veiled) return
+
+      const c = stage.cam
+      let changed = lifted
+      const n = RIG_KEYS.length
+      for (let i = 0; i <= n + 1; i++) {
+        const v = i < n ? c[RIG_KEYS[i]] : i === n ? stage.pointer.x : stage.pointer.y
+        if (v === last[i]) continue
+        last[i] = v
+        changed = true
+      }
+      if (changed) invalidate()
+      drawing = changed || stage.settling
+
+      // frame rate, only across runs of consecutive drawn frames: the first frame after a
+      // pause, or after a hidden tab, measures the pause, not the GPU
+      if (!stage.ready || !wasDrawing || !drawing || deltaMs > 250) return
+      const dt = deltaMs / 1000
+      if (watch.warm < WARMUP) {
+        // late shader compiles and the intro move are allowed to be slow
+        watch.warm += dt
+        return
+      }
+      watch.time += dt
+      watch.frames++
+      if (watch.time < SAMPLE) return
+      watch.bad = watch.frames / watch.time < MIN_FPS ? watch.bad + 1 : 0
+      watch.time = watch.frames = 0
+      // three slow samples in a row, not one bad moment
+      if (watch.bad >= 3) stageStruggling()
     }
     gsap.ticker.add(tick)
     return () => gsap.ticker.remove(tick)
-  }, [setFrameloop])
+  }, [invalidate])
   return null
 }
+// seconds of drawn frames
+const WARMUP = 3
+const SAMPLE = 2
+const MIN_FPS = 22
 
 /** Built once for the startup tier: rebuilding the chain mid-scroll renders a raw frame (a flash). */
 function Effects({ tier }: { tier: 'high' | 'low' }) {
@@ -114,7 +183,11 @@ function Effects({ tier }: { tier: 'high' | 'low' }) {
     e.target = focusPoint.set(c.fx, c.fy, c.fz)
   })
   return (
-    <EffectComposer multisampling={tier === 'high' ? 4 : 0} enableNormalPass={false}>
+    <EffectComposer
+      ref={import.meta.env.DEV ? (c: unknown) => void ((window as unknown as Record<string, unknown>).__composer = c) : undefined}
+      multisampling={tier === 'high' ? 4 : 0}
+      enableNormalPass={false}
+    >
       {/* contact occlusion only: a wide radius paints game-y halos round everything.
           Integrated graphics skip it: it is the costliest pass, and the contact shadows carry the look */}
       {tier === 'high' ? <N8AO aoRadius={0.18} intensity={1.3} distanceFalloff={0.4} quality="medium" /> : <></>}
@@ -127,10 +200,37 @@ function Effects({ tier }: { tier: 'high' | 'low' }) {
       <Bloom mipmapBlur luminanceThreshold={1.5} luminanceSmoothing={0.3} intensity={0.45} radius={0.7} />
       {/* ACES keeps the blacks black and the speculars hot; AgX flattened the set to grey */}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <Vignette offset={0.42} darkness={0.38} />
-      <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.08} />
+      {tier === 'high' ? (
+        <>
+          <Vignette offset={VIGNETTE.offset} darkness={VIGNETTE.darkness} />
+          <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={GRAIN} />
+        </>
+      ) : (
+        <SmoothedFinish />
+      )}
     </EffectComposer>
   )
+}
+const VIGNETTE = { offset: 0.42, darkness: 0.38 }
+const GRAIN = 0.08
+
+/**
+ * The lite tier's finish: anti-aliasing, then vignette and grain. Without multisampling every
+ * edge stair-steps and the platform's thin steel trim breaks into dashes. SMAA joins them up
+ * for about half what 4× multisampling costs (measured), and multisampling's memory traffic is
+ * exactly what integrated graphics are short of. It needs the tone-mapped
+ * image (its edge detection is tuned for display values), so it starts its own pass after the
+ * tone mapping, and goes before the grain so it doesn't smooth the grain away.
+ */
+function SmoothedFinish() {
+  const camera = useThree((s) => s.camera)
+  const pass = useMemo(() => {
+    const noise = new NoiseEffect({ premultiply: true, blendFunction: BlendFunction.SOFT_LIGHT })
+    noise.blendMode.opacity.value = GRAIN
+    return new EffectPass(camera, new SMAAEffect({ preset: SMAAPreset.MEDIUM }), new VignetteEffect(VIGNETTE), noise)
+  }, [camera])
+  useEffect(() => () => pass.dispose(), [pass])
+  return <primitive object={pass} />
 }
 
 /** The set: kit laid out on a rubber floor the way a strength coach would leave it. */
@@ -171,41 +271,26 @@ function Set() {
 }
 
 /**
- * If the set can't hold a scrollable frame rate (a weak GPU the startup check missed), hand the
- * page to the photographs rather than stutter through it. Measured only once the loader is
- * gone and only while frames are actually being drawn.
+ * Pixels drawn per frame, at most. Below the budget the set draws at the screen's own density,
+ * so it is as sharp as the type over it (drawing under it and letting the browser upscale is
+ * what made the low tier look soft and jagged). Above it — a 1440p or 4K panel — the ratio
+ * comes down just enough to fit. Fill cost scales with pixels, not with the ratio.
  */
-function FrameWatch() {
-  const w = useRef({ warm: 0, time: 0, frames: 0, bad: 0 })
-  useFrame((_, delta) => {
-    const s = w.current
-    // the first frame back from a paused loop or a hidden tab isn't the GPU's fault
-    if (!stage.ready || delta > 1) return
-    // warm-up: late shader compiles and the intro move are allowed to be slow
-    if (s.warm < WARMUP) {
-      s.warm += delta
-      return
-    }
-    s.time += delta
-    s.frames++
-    if (s.time < SAMPLE) return
-    s.bad = s.frames / s.time < MIN_FPS ? s.bad + 1 : 0
-    s.time = s.frames = 0
-    // three slow samples in a row, not one bad moment
-    if (s.bad >= 3) stageStruggling()
-  })
-  return null
+const PIXEL_BUDGET = { high: 1.5, low: 1.0 } // × a 1920 × 1080 frame
+
+function pickDpr(tier: 'high' | 'low') {
+  const native = window.devicePixelRatio || 1
+  const css = window.innerWidth * window.innerHeight
+  const fit = Math.sqrt((PIXEL_BUDGET[tier] * 1920 * 1080) / css)
+  // never above 2: past that nobody can see the difference on a canvas this soft-lit
+  return Math.max(1, Math.min(native, 2, fit))
 }
-const WARMUP = 3
-const SAMPLE = 2
-const MIN_FPS = 22
 
 /** One persistent canvas behind the whole page. */
 export default function Stage() {
   const tier = initialTier
-  // fixed for the session: a dpr change resizes every render target mid-scroll, a full-frame flash.
-  // Laptops on integrated graphics draw at 1:1; phones keep a little extra for their dense screens
-  const dpr = tier === 'high' ? 1.5 : isCoarsePointer ? 1.25 : 1
+  // fixed for the session: a dpr change resizes every render target mid-scroll, a full-frame flash
+  const dpr = useMemo(() => pickDpr(tier), [tier])
 
   useEffect(() => {
     if (isCoarsePointer || prefersReducedMotion) return
@@ -221,6 +306,7 @@ export default function Stage() {
   return (
     <Canvas
       className="stage-canvas"
+      frameloop="demand"
       shadows
       dpr={dpr}
       gl={{
@@ -246,8 +332,8 @@ export default function Stage() {
         <CameraRig parallax={!isCoarsePointer && !prefersReducedMotion} />
         <Effects tier={tier} />
         <Ready />
-        <VeilPause />
-        <FrameWatch />
+        <RenderDriver />
+        {import.meta.env.DEV && <DevHooks />}
       </Suspense>
     </Canvas>
   )
